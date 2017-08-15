@@ -1,4 +1,8 @@
 #!/bin/sh
 # Back built jar together with requirement into the archive
+#
+# ./build.sh [<outdir>]
 
-tar -czf statix.tar.gz statix.jar lib/ run.sh
+APP=statix
+
+tar -czf ${APP}.tar.gz ${APP}.jar lib/ run.sh
