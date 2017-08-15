@@ -10,6 +10,8 @@ JARDIR=${1:-.}  # Jar output directory
 # Compile, exit on error
 echo Compiling the classes in the \"$CLSDIR\"...
 javac -cp lib/\*:src -d $CLSDIR src/info/exascale/SimWeighted/*.java
+# Manual compilation of the specific class:
+# $ javac -cp lib/\*:src -d classes/ src/info/exascale/SimWeighted/main.java
 if [ $? -ne 0 ]
 then
 	exit $?

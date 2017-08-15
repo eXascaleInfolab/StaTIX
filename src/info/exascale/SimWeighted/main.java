@@ -32,36 +32,64 @@ public class main {
 	static HashMap<String, Double> WeightsForEachProperty = new HashMap<String, Double>();
 	static List<String> listOfInstances = new ArrayList<String>();
 	static int noTotalOccurances = 0; 
-	private static final bool  tracingOn = false;  // Enable tracing
+	private static final boolean  tracingOn = false;  // Enable tracing
 	
 	public static void main(String[] args) throws Exception {
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
-		options.addOption("g", true, "The ground-truth dataset");
+		options.addOption("g", "ground-truth", true, "The ground-truth dataset");
+		options.addOption("o", "output", true, "Output file");
+		options.addOption("a", "all-scales", false, "Fine-grained type inference on all scales besides the macro scale");
+		options.addOption("h", "help", false, "Show usage");
 		
 		HelpFormatter formatter = new HelpFormatter();
 		String[] argsOpt = new String[]{"args"};
-		
+		final String appusage = main.class.getCanonicalName() + " [OPTIONS...] <InputDataPath>";
 		
 		try {
-			CommandLine cmd = parser.parse( options, args);
-			List<String> files = cmd.getArgList();
-			if (files.size()<1) formatter.printHelp( "java app [OPTION] <InputDataPath>", options );
-				String gtDataset = null;
+			CommandLine cmd = parser.parse(options, args);
+			// Check for the help option
+			if(cmd.hasOption("h")) {
+				formatter.printHelp(appusage, options);
+				System.exit(0);
+			}
+			
+			String[] files = cmd.getArgs();
+			if(files.length != 1)
+				throw new IllegalArgumentException("The argument is invalid");
+
 			if(cmd.hasOption("g")) {
-				gtDataset = cmd.getOptionValue("g");
-				System.err.println("g file= "+gtDataset);
-				FileExits(args[0],gtDataset);
+				String gtDataset = cmd.getOptionValue("g");
+				//System.out.println("Ground-truth file= "+gtDataset);
+				LoadDatasets(files[0], gtDataset);
 			}
 			else {
-				System.err.println("input file= "+args[0]);
-				NoFileExists(args[0]);
+				//System.out.println("Input file= "+args[0]);
+				LoadDataset(files[0]);
 			}
+
+			// Set output file
+			String outpfile = null;
+			if(cmd.hasOption("o")) {
+				outpfile = cmd.getOptionValue("o");
+			}
+			else {
+				outpfile = files[0];
+				// Replace the extension to the clustering results
+				final int iext = outpfile.lastIndexOf('.', 1);
+				if(iext != -1)
+					outpfile = outpfile.substring(0, iext);
+				outpfile += ".cnl";  // Default extension for the output file
+			}
+			
+			// Perform type inference
+			Statix(outpfile, false);
 		}
-		catch (ParseException e) {
+		catch (ParseException | IllegalArgumentException e) {
 			e.printStackTrace();
+			formatter.printHelp(appusage, options);
+			System.exit(1);
 		}
-		Statix(args[0] + ".cnl", false);
 	}
 	
 	public static HashMap<String, Double> PropertyWeights (String file1, String file2) throws IOException {
@@ -72,7 +100,7 @@ public class main {
 	
 	
 	//In case that only input file is givven to the app (without Ground-TRuth dataset)all the property weights will be set = 1
-	public static void NoFileExists(String N3DataSet) throws IOException {
+	public static void LoadDataset(String N3DataSet) throws IOException {
 		readDataSet1(N3DataSet);
 		
 		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>();
@@ -366,7 +394,7 @@ public class main {
 			}
 	 }
 	
-	public static void Statix(String outputPath, bool fineGrained) throws Exception {
+	public static void Statix(String outputPath, boolean fineGrained) throws Exception {
 		System.err.println("Calling the clustering lib...");
 		int n = instanceListPropertiesTreeMap.size();
 		Graph gr= new Graph(n);
@@ -392,8 +420,9 @@ public class main {
 		System.err.println("Input graph formed");
 		//clustring and output
 		OutputOptions outpopts = new OutputOptions();
-		final short outpflag = fineGrained ? 0x45  // ALLCLS | SIMPLE
-			: 0x41;  // ROOT | SIMPLE;
+		final short outpflag = (short)(fineGrained
+			? 0x45  // ALLCLS | SIMPLE
+			: 0x41);  // ROOT | SIMPLE
 		outpopts.setClsfmt(outpflag);
 		outpopts.setClsrstep(0.618f);
 		outpopts.setClsfile(outputPath);
@@ -420,7 +449,7 @@ public class main {
 	}
 		
 	//This function first check if it is out put results from before and will delete them before running the app and then read the directory for input dataset
-	public static void FileExits(String dataPath,String dataPath2) throws Exception {
+	public static void LoadDatasets(String dataPath, String dataPath2) throws Exception {
 		readDataSet1(dataPath);
 		WeightsForEachProperty = readDataSet2(dataPath2);
 	}
