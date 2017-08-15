@@ -8,4 +8,5 @@
 LD_LIBRARY_PATH=lib:. java -cp lib/\*:classes info.exascale.SimWeighted.main $@
 
 ## Execution of the jar (TOFIX)
+# Note: execution from the jar causes some issues with the Common CLI linking
 #LD_LIBRARY_PATH=lib:. java -cp lib/\*:./\*:. -jar statix.jar $@

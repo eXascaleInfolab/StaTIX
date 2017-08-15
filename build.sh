@@ -25,7 +25,8 @@ then
 	mkdir -p $OUTDIR 2> /dev/null
 fi
 
-### Make the jarfile
+### Make the jar file
+# Note: execution from the jar causes some issues with the Common CLI linking
 #echo Building the jar in the \"$OUTDIR\"...
 #jar -c -e info.exascale.SimWeighted.main -f ${OUTDIR}/${APP}.jar -C $CLSDIR .
 
