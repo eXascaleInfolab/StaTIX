@@ -55,8 +55,10 @@ The compilation requires JDK and verified on OpenJDK 8/9 x64.
 The build yields `classes/` directory and then packs them into `statix.jar` or the tarball located in the specified `<outdir>` (`.` by default).
 
 ### Distribution
+
 Compilation generates `statix.tar.gz` tarball with all requirements ready for the distribution.
 
 ## Related Projects
+
 - [xmeasures](https://github.com/eXascaleInfolab/xmeasures)  - Extrinsic clustering measures evaluation for the multi-resolution clustering with overlaps (covers): F1_gm for overlapping multi-resolution clusterings with possible unequal node base and standard NMI for non-overlapping clustering on a single resolution.
 - [GenConvNMI](https://github.com/eXascaleInfolab/GenConvNMI) - Overlapping NMI evaluation that is (unlike `onmi`) compatible with the original NMI and suitable for both overlapping and multi resolution (hierarchical) clusterings.

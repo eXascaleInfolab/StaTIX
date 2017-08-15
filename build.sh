@@ -31,4 +31,4 @@ fi
 #jar -c -e info.exascale.SimWeighted.main -f ${OUTDIR}/${APP}.jar -C $CLSDIR .
 
 echo Building the tarball in the \"$OUTDIR\"...
-tar -czf ${APP}.tar.gz ${APP}.jar lib/ run.sh
+tar -czf ${APP}.tar.gz $CLSDIR lib/ run.sh
