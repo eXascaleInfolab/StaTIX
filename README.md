@@ -27,7 +27,7 @@ The output results are clusters in the [.cnl format](https://github.com/eXascale
 
 ```
 ./run.sh  -h
-Usage: info.exascale.SimWeighted.main [OPTIONS...] <inputfile.rdf>
+Usage: ./run.sh [OPTIONS...] <inputfile.rdf>
 Statistical type inference in fully automatic and semi supervised modes
 Options:
  -a,--all-scales           Fine-grained type inference on all scales
@@ -55,11 +55,7 @@ The compilation requires JDK and verified on OpenJDK 8/9 x64.
 The build yields `classes/` directory and then packs them into `statix.jar` or the tarball located in the specified `<outdir>` (`.` by default).
 
 ### Distribution
-To pack all the executables to the tarball:
-```
-./pack.sh
-```
-It packs `./statix.jar` and requirements to the `tar.gz` file in the current directory.
+Compilation generates `statix.tar.gz` tarball with all requirements ready for the distribution.
 
 ## Related Projects
 - [xmeasures](https://github.com/eXascaleInfolab/xmeasures)  - Extrinsic clustering measures evaluation for the multi-resolution clustering with overlaps (covers): F1_gm for overlapping multi-resolution clusterings with possible unequal node base and standard NMI for non-overlapping clustering on a single resolution.
