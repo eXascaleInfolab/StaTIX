@@ -116,6 +116,7 @@ public class main {
 			}
 		}	
 		System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = " + weightPerProperty.get("<http://www.w3.org/2002/07/owl#sameAs>"));
+	WeightsForEachProperty=weightPerProperty;
 	}
 	
 	//function to read the Input Dataset and put the values in map and instanceListProperties TreeMaps
