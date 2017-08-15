@@ -37,20 +37,23 @@ public class main {
 	public static void main(String[] args) throws Exception {
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
-		options.addOption("g", "ground-truth", true, "The ground-truth dataset");
-		options.addOption("o", "output", true, "Output file");
-		options.addOption("a", "all-scales", false, "Fine-grained type inference on all scales besides the macro scale");
 		options.addOption("h", "help", false, "Show usage");
+		options.addOption("g", "ground-truth", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties)");
+		options.addOption("o", "output", true, "Output file, default: <inpfile>.cnl");
+		options.addOption("a", "all-scales", false, "Fine-grained type inference on all scales besides the macro scale");
+		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		
 		HelpFormatter formatter = new HelpFormatter();
 		String[] argsOpt = new String[]{"args"};
-		final String appusage = main.class.getCanonicalName() + " [OPTIONS...] <InputDataPath>";
+		final String appusage = main.class.getCanonicalName() + " [OPTIONS...] <inputfile.rdf>";
+		final String desription = "Statistical type inference in fully automatic and semi supervised modes\nOptions:";
+		final String reference = "\nSee details in https://github.com/eXascaleInfolab/StaTIX";
 		
 		try {
 			CommandLine cmd = parser.parse(options, args);
 			// Check for the help option
 			if(cmd.hasOption("h")) {
-				formatter.printHelp(appusage, options);
+				formatter.printHelp(appusage, desription, options, reference);
 				System.exit(0);
 			}
 			
@@ -58,14 +61,18 @@ public class main {
 			if(files.length != 1)
 				throw new IllegalArgumentException("The argument is invalid");
 
+			// Check for the filtering option
+			// ATTENTION: should be done before the input datasets reading
+			boolean filteringOn = cmd.hasOption("f");
+
 			if(cmd.hasOption("g")) {
 				String gtDataset = cmd.getOptionValue("g");
 				//System.out.println("Ground-truth file= "+gtDataset);
-				LoadDatasets(files[0], gtDataset);
+				LoadDatasets(files[0], gtDataset, filteringOn);
 			}
 			else {
 				//System.out.println("Input file= "+args[0]);
-				LoadDataset(files[0]);
+				LoadDataset(files[0], filteringOn);
 			}
 
 			// Set output file
@@ -83,25 +90,18 @@ public class main {
 			}
 			
 			// Perform type inference
-			Statix(outpfile, cmd.hasOption("a"));
+			Statix(outpfile, cmd.hasOption("a"), filteringOn);
 		}
 		catch (ParseException | IllegalArgumentException e) {
 			e.printStackTrace();
-			formatter.printHelp(appusage, options);
+			formatter.printHelp(appusage, desription, options, reference);
 			System.exit(1);
 		}
 	}
-	
-	public static HashMap<String, Double> PropertyWeights (String file1, String file2) throws IOException {
-		readDataSet1(file1);
 		
-		return readDataSet2(file2);
-	}
-	
-	
 	//In case that only input file is givven to the app (without Ground-TRuth dataset)all the property weights will be set = 1
-	public static void LoadDataset(String N3DataSet) throws IOException {
-		readDataSet1(N3DataSet);
+	public static void LoadDataset(String N3DataSet, boolean filteringOn) throws IOException {
+		readDataSet1(N3DataSet, filteringOn);
 		
 		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>();
 		Iterator propIt = map.entrySet().iterator();
@@ -114,13 +114,14 @@ public class main {
 			catch (Exception exeption) {
 				throw exeption;
 			}
-		}	
-		//System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = " + weightPerProperty.get("<http://www.w3.org/2002/07/owl#sameAs>"));
+		}
+		if(tracingOn)
+			System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = " + weightPerProperty.get("<http://www.w3.org/2002/07/owl#sameAs>"));
 		WeightsForEachProperty = weightPerProperty;
 	}
 	
 	//function to read the Input Dataset and put the values in map and instanceListProperties TreeMaps
-	public static void readDataSet1(String N3DataSet) throws IOException {
+	public static void readDataSet1(String N3DataSet, boolean filteringOn) throws IOException {
 		FileReader fileReader = new FileReader(N3DataSet);
 		BufferedReader bufferedReader = new BufferedReader(fileReader);
 		//List<String> lines = new ArrayList<String>();
@@ -174,25 +175,29 @@ public class main {
 			
 		}
 		bufferedReader.close();
-		//setBitwise for id
+		
+		// setBitwise for id
+		if(filteringOn) {
 			Iterator insIt = instanceListPropertiesTreeMap.entrySet().iterator();
-			
+			final int mask = 1 << 31;
+			//System.out.println("mask= "+mask);
+
 			while(insIt.hasNext()) {
-				int value = 0;
-				
 				Map.Entry<String, InstancePropertiesIsTyped> entry = (Entry<String, InstancePropertiesIsTyped>) insIt.next();
 				if (entry.getValue().isTyped == false) {
-					value= entry.getValue().id;
-					int mask = 1 << 31;
-					value |= mask;
-					entry.getValue().id = value;
-					System.out.println("mask= "+mask);
-					System.out.println("value= "+entry.getKey());
+					//int value = entry.getValue().id;
+					//value |= mask;
+					//entry.getValue().id = value;
+					//entry.getValue().id = -((int) entry.getValue().id);  // Note: causes issues if id is not int32_t
+					entry.getValue().id = entry.getValue().id | mask;
 
-					System.out.println("value= "+entry.getValue().id);
+					if(tracingOn) {
+						System.out.println("value= "+entry.getKey());
+						System.out.println("value= "+entry.getValue().id);
+					}
 				}
 			}
-		
+		}
 	}
 	
 	public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOException {
@@ -395,7 +400,7 @@ public class main {
 			}
 	 }
 	
-	public static void Statix(String outputPath, boolean fineGrained) throws Exception {
+	public static void Statix(String outputPath, boolean fineGrained, boolean filteringOn) throws Exception {
 		System.err.println("Calling the clustering lib...");
 		int n = instanceListPropertiesTreeMap.size();
 		Graph gr= new Graph(n);
@@ -427,7 +432,7 @@ public class main {
 		outpopts.setClsfmt(outpflag);
 		outpopts.setClsrstep(0.618f);
 		outpopts.setClsfile(outputPath);
-		outpopts.setFltMembers(true);
+		outpopts.setFltMembers(filteringOn);
 
 		System.err.println("Starting the hierarchy building");
 		Hierarchy hr = gr.buildHierarchy();
@@ -450,8 +455,8 @@ public class main {
 	}
 		
 	//This function first check if it is out put results from before and will delete them before running the app and then read the directory for input dataset
-	public static void LoadDatasets(String dataPath, String dataPath2) throws Exception {
-		readDataSet1(dataPath);
+	public static void LoadDatasets(String dataPath, String dataPath2, boolean filteringOn) throws Exception {
+		readDataSet1(dataPath, filteringOn);
 		WeightsForEachProperty = readDataSet2(dataPath2);
 	}
 }

@@ -14,9 +14,9 @@ Statistical Type Inference (both fully automatic and semi supervised), a Master 
 
 ## Overview
 
-StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either a) the sample of the processing dataset *prelabeled with the type* properties should be provided, or b) another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset.
+StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either *a)* the sample of the processing dataset *prelabeled with the type* properties should be provided, or *b)* another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset. The input RDF dataset(s) should be specified in the [N3 format](https://www.w3.org/TeamSubmission/n3/): `<subject> <property> <object> .`.
 
-The output results are clusters in the [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members) that correspond to the types and have a subject id as members of the clusters.
+The output results are clusters in the [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members). Each cluster correspond to the type and has members represented by the subject ids. Subject ids are generated sequentially starting from `0` for all unique subjects in the input dataset.
 
 ## Requirements
 *StaTIX* uses *DAOC* clustering library and *Apache [Commons CLI](https://commons.apache.org/proper/commons-cli/)* arguments parser. Both libraries are included into the repository and located in the `/lib` dir.
@@ -26,14 +26,21 @@ The output results are clusters in the [.cnl format](https://github.com/eXascale
 ## Usage
 
 ```
-Usage:  run.sh [OPTIONS...] <InputDataPath>
-
+./run.sh  -h
+Usage: info.exascale.SimWeighted.main [OPTIONS...] <inputfile.rdf>
+Statistical type inference in fully automatic and semi supervised modes
 Options:
  -a,--all-scales           Fine-grained type inference on all scales
                            besides the macro scale
- -g,--ground-truth <arg>   The ground-truth dataset
+ -f,--filter               Filter out from the resulting clusters all
+                           subjects that do not have #type property in the
+                           input dataset, used for the type inference
+                           evaluation
+ -g,--ground-truth <arg>   The ground-truth sample (subset of the input
+                           dataset or another similar dataset with the
+                           specified type properties)
  -h,--help                 Show usage
- -o,--output <arg>         Output file
+ -o,--output <arg>         Output file, default: <inpfile>.cnl
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  
