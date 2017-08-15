@@ -14,12 +14,30 @@ Statistical Type Inference (both fully automatic and semi supervised), a Master 
 
 ## Overview
 
+StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either a) the sample of the processing dataset *prelabeled with the type* properties should be provided, or b) another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset.
+
+The output results are the clusters in [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members) that correspond to the types and have a subject id as members of the clusters.
+
 ## Requirements
 *StaTIX* uses *DAOC* clustering library and *Apache [Commons CLI](https://commons.apache.org/proper/commons-cli/)* arguments parser. Both libraries are included into the repository and located in the `/lib` dir.
 
 *DAOC* is a C++ clustering library with [SWIG](http://www.swig.org/)-generated Java interface. The provided native library (`libdaoc.so`) is built on *Ubuntu 16.04 x64* (and might also work in the [Ubuntu console of Windows 10 x64](https://www.windowscentral.com/how-install-bash-shell-command-line-windows-10)). *DAOC* should be rebuilt from the sources to run *StaTIX* on other platforms.
 
 ## Usage
+
+```
+Usage:  run.sh [OPTIONS...] <InputDataPath>
+
+Options:
+ -a,--all-scales           Fine-grained type inference on all scales
+                           besides the macro scale
+ -g,--ground-truth <arg>   The ground-truth dataset
+ -h,--help                 Show usage
+ -o,--output <arg>         Output file
+```
+To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
+To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  
+To infer types on multiple resolution levels (besides the whole dataset scope): `./run.sh -a inpDataset.rdf`.  
 
 ## Related Projects
 - [xmeasures](https://github.com/eXascaleInfolab/xmeasures)  - Extrinsic clustering measures evaluation for the multi-resolution clustering with overlaps (covers): F1_gm for overlapping multi-resolution clusterings with possible unequal node base and standard NMI for non-overlapping clustering on a single resolution.
