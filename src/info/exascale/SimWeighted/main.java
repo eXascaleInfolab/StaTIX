@@ -76,14 +76,14 @@ public class main {
 			else {
 				outpfile = files[0];
 				// Replace the extension to the clustering results
-				final int iext = outpfile.lastIndexOf('.', 1);
+				final int iext = outpfile.lastIndexOf('.');
 				if(iext != -1)
 					outpfile = outpfile.substring(0, iext);
 				outpfile += ".cnl";  // Default extension for the output file
 			}
 			
 			// Perform type inference
-			Statix(outpfile, false);
+			Statix(outpfile, cmd.hasOption("a"));
 		}
 		catch (ParseException | IllegalArgumentException e) {
 			e.printStackTrace();
