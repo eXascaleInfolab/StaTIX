@@ -51,7 +51,7 @@ To infer types on multiple resolution levels (besides the whole dataset scope): 
 ```
 ./build.sh [-p] [<outdir>="."]
 
--p,--packed - build the tarball besides the executables
+-p,--pack - build the tarball besides the executables
 ```
 The compilation requires JDK and verified on OpenJDK 8/9 x64.  
 The build yields `statix.jar` with all requirements in the output directory (`.` by default) and optionally packs all these files to the tarball `statix.tar.gz`.

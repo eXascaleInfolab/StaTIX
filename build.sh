@@ -3,19 +3,19 @@
 # The only optional parameter is the jar output dir
 #
 # ./build.sh [-p] [<outdir>]
-# -p,--packed - build the tarball besides the executables
+# -p,--pack - build the tarball besides the executables
 
 # Process input options
 TARBALL=0
 case $1 in
--p|--packed)
+-p|--pack)
 	TARBALL=1
 	shift  # Shift the arguments
 	;;
 -*)
 	echo "Invalid option specified, usage:"\
 		"\n  ./build.sh [-p] [<outdir>=\".\"]"\
-		"-p,--packed - build the tarball besides the executables"
+		"-p,--pack - build the tarball besides the executables"
 	exit 1
 	;;
 esac
