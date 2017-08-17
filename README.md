@@ -52,7 +52,9 @@ Options:
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  
-To infer types on multiple resolution levels (besides the whole dataset scope): `./run.sh -a inpDataset.rdf`.  
+To infer types on multiple resolution levels (besides the whole dataset scope): `./run.sh -a inpDataset.rdf`.
+
+> StaTIX uses all available relations to form similarity matrix, which causes *OutOfMemory* exception for the large datasets. If you would like to it for large datasets, then you will need to reset all properties weights that are less than the median weight. This option might be added to the CLI interface soon...
 
 ### Compilation
 
