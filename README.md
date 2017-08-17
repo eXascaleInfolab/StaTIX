@@ -15,7 +15,8 @@ Statistical Type Inference (both fully automatic and semi supervised) for RDF da
 ## Overview
 
 StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either *a)* the sample of the processing dataset *prelabeled with the type* properties should be provided, or *b)* another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset. The input RDF dataset(s) should be specified in the [N3 format](https://www.w3.org/TeamSubmission/n3/): `<subject> <property> <object> .`.  
-Types that are clusters of the RDF triple subjects are identified in the scope of the whole input dataset with automatic scale identification for each cluster. The scale for all clusters can be manually forced in case specific macro or micro level clustering is required.
+Types that are clusters of the RDF triple subjects are identified in the scope of the whole input dataset with *automatic scale identification for each cluster*. The *scale* for all clusters can be manually forced in case specific macro or micro level clustering is required.  
+For the semi supervised mode, similarity between the RDF subjects is evaluated with respect to the #type properties using *TF-IDF based similarity weighting* for the weighted *cosin similarity*.
 
 The output results are clusters in the [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members). Each cluster correspond to the type and has members represented by the subject ids. Subject ids are generated sequentially starting from `0` for all unique subjects in the input dataset.
 
