@@ -15,7 +15,7 @@ USAGE="$0 [-p] [-c] [<outdir>]
 TARBALL=0  # Make tarball
 DELCLS=1  # Delete the classes after the jar building
 
-while [ -n "${1}" ]
+while [ $1 ]
 do
 	case $1 in
 	-p|--pack)
