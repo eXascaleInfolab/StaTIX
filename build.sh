@@ -47,13 +47,13 @@ CLSDIR="$OUTDIR"/classes  # Classes output directory
 APP=statix  # App name
 
 # Compile, exit on error
-echo Compiling the classes in the \"$CLSDIR\"...
+echo "Compiling the classes in the \"$CLSDIR\"..."
 javac -cp lib/\*:src -d "$CLSDIR" src/info/exascale/SimWeighted/*.java
 # Manual compilation of the specific class:
 # $ javac -cp lib/\*:src -d classes/ src/info/exascale/SimWeighted/main.java
 if [ $? -ne 0 ]
 then
-	echo Build failed, errcode: $?
+	echo "Build failed, errcode: $?"
 	exit $?
 fi
 
@@ -64,14 +64,14 @@ echo Building the jar in the \"$OUTDIR\"...
 jar -c -e info.exascale.SimWeighted.main -f "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
 if [ $? -ne 0 ]
 then
-	echo Build failed, errcode: $?
+	echo "Build failed, errcode: $?"
 	exit $?
 fi
 
 # Remove the compiled classes
 if [ $DELCLS -ne 0 ]
 then
-	echo Removing the \"$CLSDIR\"
+	echo "Removing the \"$CLSDIR\""
 	rm -rf "$CLSDIR"
 fi
 
@@ -84,6 +84,6 @@ fi
 # Build the tarball ------------------------------------------------------------
 if [ $TARBALL -ne 0 ]
 then
-	echo Building the tarball in the \"$OUTDIR\"...
+	echo "Building the tarball in the \"$OUTDIR\"..."
 	./pack.sh "$OUTDIR" "$OUTDIR"
 fi
