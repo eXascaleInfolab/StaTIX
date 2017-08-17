@@ -14,7 +14,8 @@ Statistical Type Inference (both fully automatic and semi supervised), a Master 
 
 ## Overview
 
-StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either *a)* the sample of the processing dataset *prelabeled with the type* properties should be provided, or *b)* another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset. The input RDF dataset(s) should be specified in the [N3 format](https://www.w3.org/TeamSubmission/n3/): `<subject> <property> <object> .`.
+StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either *a)* the sample of the processing dataset *prelabeled with the type* properties should be provided, or *b)* another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset. The input RDF dataset(s) should be specified in the [N3 format](https://www.w3.org/TeamSubmission/n3/): `<subject> <property> <object> .`.  
+Types that are clusters of the RDF triple subjects are identified in the scope of the whole input dataset with automatic scale identification for each cluster. The scale for all clusters can be manually forced in case specific macro or micro level clustering is required.
 
 The output results are clusters in the [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members). Each cluster correspond to the type and has members represented by the subject ids. Subject ids are generated sequentially starting from `0` for all unique subjects in the input dataset.
 
@@ -29,6 +30,8 @@ The output results are clusters in the [.cnl format](https://github.com/eXascale
 ./run.sh  -h
 Usage: ./run.sh [OPTIONS...] <inputfile.rdf>
 Statistical type inference in fully automatic and semi supervised modes
+Options:[OPTIONS...] <inputfile.rdf>
+Statistical type inference in fully automatic and semi supervised modes
 Options:
  -a,--all-scales           Fine-grained type inference on all scales
                            besides the macro scale
@@ -41,6 +44,10 @@ Options:
                            specified type properties)
  -h,--help                 Show usage
  -o,--output <arg>         Output file, default: <inpfile>.cnl
+ -s,--scale <arg>          Scale (gamma parameter of the clustering), -1
+                           is automatic scale inference for each cluster,
+                           >=0 is the forced static scale (<=1 for the
+                           macro clustering); default: -1
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  

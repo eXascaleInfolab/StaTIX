@@ -41,6 +41,7 @@ public class main {
 		options.addOption("g", "ground-truth", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties)");
 		options.addOption("o", "output", true, "Output file, default: <inpfile>.cnl");
 		options.addOption("a", "all-scales", false, "Fine-grained type inference on all scales besides the macro scale");
+		options.addOption("s", "scale", true, "Scale (gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		
 		HelpFormatter formatter = new HelpFormatter();
@@ -88,9 +89,16 @@ public class main {
 					outpfile = outpfile.substring(0, iext);
 				outpfile += ".cnl";  // Default extension for the output file
 			}
+			// Scale
+			float scale = -1;
+			if(cmd.hasOption("s")) {
+				scale = Float.parseFloat(cmd.getOptionValue("s"));
+				if(scale != -1 && scale < 0)
+					throw new IllegalArgumentException("The scale parameter is out of the expected range");
+			}
 			
 			// Perform type inference
-			Statix(outpfile, cmd.hasOption("a"), filteringOn);
+			Statix(outpfile, scale, cmd.hasOption("a"), filteringOn);
 		}
 		catch (ParseException | IllegalArgumentException e) {
 			e.printStackTrace();
@@ -400,7 +408,7 @@ public class main {
 			}
 	 }
 	
-	public static void Statix(String outputPath, boolean fineGrained, boolean filteringOn) throws Exception {
+	public static void Statix(String outputPath, float scale, boolean fineGrained, boolean filteringOn) throws Exception {
 		System.err.println("Calling the clustering lib...");
 		int n = instanceListPropertiesTreeMap.size();
 		Graph gr= new Graph(n);
@@ -435,7 +443,9 @@ public class main {
 		outpopts.setFltMembers(filteringOn);
 
 		System.err.println("Starting the hierarchy building");
-		Hierarchy hr = gr.buildHierarchy();
+		ClusterOptions  cops = new ClusterOptions();
+		cops.setGamma(scale);
+		Hierarchy hr = gr.buildHierarchy(cops);
 		System.err.println("Starting the hierarchy output");
 		hr.output(outpopts);
 		System.err.println("The types inference is completed");
