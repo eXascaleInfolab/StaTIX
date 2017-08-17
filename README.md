@@ -72,7 +72,7 @@ The build yields `statix.jar` with all requirements in the output directory (`.`
 
 Compilation generates `statix.tar.gz` tarball with all requirements ready for the distribution. Also the tarball can be generated from the executables using the `pack.sh` script.
 
-**Note:** Please, [star this project](//github.com/eXascaleInfolab/TInfES) if you use it.
+**Note:** Please, [star this project](//github.com/eXascaleInfolab/StaTIX) if you use it.
 
 ## Related Projects
 
