@@ -95,13 +95,16 @@ public static void readDataSet1(String N3DataSet, String idMapFName) throws IOEx
 //	System.out.println(properties.size());
 	
 }
+
+static class InstPropsStat {
+	public TreeSet<String>  properties = null;  // new TreeSet<String>()
+	public int  typeCount = 0;
+}
 	
 public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOException {
 	
 	//TreeMap key=instanceName and the value= List Of Properties of the key.
-	TreeMap<String, TreeSet<String>> mapInstanceProperties = new TreeMap<String, TreeSet<String>>();
-	//TreeMap key=instanceName and the value= number of the types  that instance has
-	TreeMap<String, Integer> instanceTypesNum = new TreeMap<String, Integer>();
+	TreeMap<String, InstPropsStat> mapInstanceProperties = new TreeMap<String, InstPropsStat>();
 	FileReader fileReader = new FileReader(N3DataSet);
 	BufferedReader bufferedReader = new BufferedReader(fileReader);
 	int typeCount = 0;
@@ -121,23 +124,17 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			typeCount++;
 		}
 		
-		String instance = s[0];
-		Integer  typesNum = instanceTypesNum.get(instance);
-		if (typesNum == null) {
-			typesNum = new Integer(0);
-			instanceTypesNum.put(instance, typesNum);
+		final String instance = s[0];
+		InstPropsStat propstat = mapInstanceProperties.get(instance);
+		if (propstat == null) {
+			propstat = new InstPropsStat();
+			mapInstanceProperties.put(instance, propstat);
 		}
-		if (isTyped) {
-			++typesNum;
-			continue;
-		}
-
-		TreeSet<String> instanceProperties = mapInstanceProperties.get(instance);
-		if (instanceProperties == null) {
-			instanceProperties = new TreeSet<String>();
-			mapInstanceProperties.put(instance, instanceProperties);
-		}
-		instanceProperties.add(s[1]);
+		if (!isTyped) {
+			if (propstat.properties == null)
+				propstat.properties = new TreeSet<String>();
+			propstat.properties.add(s[1]);
+		} else ++propstat.typeCount;
 	
 	}
 	bufferedReader.close();
@@ -156,12 +153,10 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		Iterator mapInstPropIt = mapInstanceProperties.entrySet().iterator();
 		
 		while(mapInstPropIt.hasNext()) {
-			Map.Entry<String, TreeSet<String>> instPropsEntry = (Entry<String, TreeSet<String>>) mapInstPropIt.next();
-			if (instPropsEntry.getValue()!=null && instPropsEntry.getValue().contains(entry.getKey())) {
-				Integer  nt = instanceTypesNum.get(instPropsEntry.getKey());
-				if(nt == null)
-					continue;
-				value += nt;
+			Map.Entry<String, InstPropsStat> instPropsEntry = (Entry<String, InstPropsStat>) mapInstPropIt.next();
+			InstPropsStat propstat = instPropsEntry.getValue();
+			if (propstat != null && propstat.properties != null && propstat.properties.contains(entry.getKey())) {
+				value += propstat.typeCount;
 				//if (nt>0) System.out.println(String.format("%s : %d", instPropsEntry.getKey(), nt));
 			}
 		}
@@ -172,7 +167,6 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	}
 	
 	mapInstanceProperties.clear();
-	instanceTypesNum.clear();
 	
 	//******************************************************************PropertyWeighCalculation********************************************************
 	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 1);
