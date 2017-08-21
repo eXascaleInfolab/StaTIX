@@ -87,7 +87,8 @@ public static void readDataSet1(String N3DataSet, String idMapFName) throws IOEx
 		} else entryProperty.occurances++ ;
     }
     bufferedReader.close();
-    idmapf.close();
+    if (idmapf != null)
+		idmapf.close();
 
 //	System.out.println("List Properties for the instance <http://dbpedia.org/resource/BMW_Museum>=  "+instanceListPropertiesTreeMap.get("<http://dbpedia.org/resource/BMW_Museum>").propertySet);
 //	System.out.println("The TreeMap Including properties and number of accurances in this case for <http://www.w3.org/2002/07/owl#sameAs>= "+map.get("<http://www.w3.org/2002/07/owl#sameAs>").occurances);
