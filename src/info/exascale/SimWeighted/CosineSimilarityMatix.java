@@ -21,7 +21,7 @@ public class CosineSimilarityMatix {
 public static final String typeProperty = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 public static TreeMap<String, Property> properties = new TreeMap<String, Property>();
 public static TreeMap<String, InstanceProperties> instanceListPropertiesTreeMap = new TreeMap<String, InstanceProperties>();
-public static HashMap<String, Double> weightsForEachProperty = new HashMap<String, Double>();
+public static HashMap<String, Double> weightsForEachProperty = null;
 static int totalOccurances = 0; 
 
 // Output id mapping if required (idMapFName != null)
@@ -48,7 +48,6 @@ public static void readDataSet1(String N3DataSet, String idMapFName) throws IOEx
     if (idMapFName != null)
 		idmapf = new BufferedWriter(new FileWriter(idMapFName));
     
-    //List<String> lines = new ArrayList<String>();
     String line = null;
     while ((line = bufferedReader.readLine()) != null) {
 		if (line.isEmpty())
@@ -92,8 +91,8 @@ public static void readDataSet1(String N3DataSet, String idMapFName) throws IOEx
 
 //	System.out.println("List Properties for the instance <http://dbpedia.org/resource/BMW_Museum>=  "+instanceListPropertiesTreeMap.get("<http://dbpedia.org/resource/BMW_Museum>").propertySet);
 //	System.out.println("The TreeMap Including properties and number of accurances in this case for <http://www.w3.org/2002/07/owl#sameAs>= "+map.get("<http://www.w3.org/2002/07/owl#sameAs>").occurances);
-//	System.out.println(map.get("<http://dbpedia.org/ontology/abstract>").propertyName);
-//	System.out.println(map.size());
+//	System.out.println(properties.get("<http://dbpedia.org/ontology/abstract>").propertyName);
+//	System.out.println(properties.size());
 	
 }
 	
@@ -146,7 +145,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	
 	//Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in DBpedia***********************************************
 	
-	HashMap<String, Integer> propertiesTypesNum = new HashMap<String, Integer>(properties.size());
+	HashMap<String, Integer> propertiesTypesNum = new HashMap<String, Integer>(properties.size(), 0.8f);
 	int ntypesDBP = 0;
 	Iterator mapIt = properties.entrySet().iterator();
 	
@@ -182,7 +181,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	instanceTypesNum.clear();
 	
 	//******************************************************************PropertyWeighCalculation********************************************************
-	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>();
+	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 0.8f);
 	double propertyWeight = 0, totalWeight = 0;
 	int foundProps = 0;
 	Iterator propIt = properties.entrySet().iterator();
@@ -225,7 +224,6 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		TreeSet<String> instance2Properties= instanceListPropertiesTreeMap.get(instance2).propertySet;
 		int sizeListProperty1=instance1Properties.size();
 		int sizeListProperty2=instance2Properties.size();
-		//ArrayList<Double> powerlist = new ArrayList<Double>();
 
 		if (sizeListProperty1>sizeListProperty2) {
 			TreeSet<String> tempTreeSet = instance1Properties;

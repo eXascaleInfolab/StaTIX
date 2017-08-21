@@ -110,7 +110,7 @@ public class main {
 	public static void LoadDataset(String N3DataSet, boolean filteringOn, String idMapFName) throws IOException {
 		readDataSet1(N3DataSet, filteringOn, idMapFName);
 		
-		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>();
+		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(CosineSimilarityMatix.properties.size(), 0.8f);
 		Iterator propIt = CosineSimilarityMatix.properties.entrySet().iterator();
 		while(propIt.hasNext()) {
 			Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
