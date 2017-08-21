@@ -155,26 +155,20 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		// System.out.println(String.format(" ************* Property : %s **************", entry.getValue().key));
 		Iterator mapInstPropIt = mapInstanceProperties.entrySet().iterator();
 		
-		try {
-			while(mapInstPropIt.hasNext()) {
-				Map.Entry<String, TreeSet<String>> instPropsEntry = (Entry<String, TreeSet<String>>) mapInstPropIt.next();
-				if (instPropsEntry.getValue()!=null && instPropsEntry.getValue().contains(entry.getKey())) {
-					instanceTypesNum.get(instPropsEntry.getKey());
-					Integer  nt = instanceTypesNum.get(instPropsEntry.getKey());
-					if(nt == null)
-						continue;
-					value += nt;
-					//if (nt>0) System.out.println(String.format("%s : %d", instPropsEntry.getKey(), nt));
-				}
+		while(mapInstPropIt.hasNext()) {
+			Map.Entry<String, TreeSet<String>> instPropsEntry = (Entry<String, TreeSet<String>>) mapInstPropIt.next();
+			if (instPropsEntry.getValue()!=null && instPropsEntry.getValue().contains(entry.getKey())) {
+				Integer  nt = instanceTypesNum.get(instPropsEntry.getKey());
+				if(nt == null)
+					continue;
+				value += nt;
+				//if (nt>0) System.out.println(String.format("%s : %d", instPropsEntry.getKey(), nt));
 			}
-			//System.out.println("" +value) ;
-			propertiesTypesNum.put(entry.getKey(), value);
-			ntypesDBP += value;
-			//mapIt.remove();
 		}
-		catch (Exception exeption) {
-			throw exeption;
-		}
+		//System.out.println("" +value) ;
+		propertiesTypesNum.put(entry.getKey(), value);
+		ntypesDBP += value;
+		//mapIt.remove();
 	}
 	
 	mapInstanceProperties.clear();
@@ -185,22 +179,25 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	double propertyWeight = 0, totalWeight = 0;
 	int foundProps = 0;
 	Iterator propIt = properties.entrySet().iterator();
-	ArrayList<String> notFoundProps = new ArrayList<String>(properties.size() / 10);  // At least 10% of props usually belong to the typed instances
-	ArrayList<Double> propWeights = new ArrayList<Double>();
+	ArrayList<String> notFoundProps = new ArrayList<String>();
+	// At least 10% of props usually belong to the typed instances
+	ArrayList<Double> propWeights = new ArrayList<Double>(properties.size() / 10);
 
 	while(propIt.hasNext()) {
 		Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
-		if(propertiesTypesNum.get(entry.getKey())!=0) {
+		final String  propName = entry.getKey();
+		final Integer  propsNum = propertiesTypesNum.get(propName);
+		if(propsNum != 0) {
 			foundProps++;
-			double no_type_Propi = propertiesTypesNum.get(entry.getKey());
-			double no_occerances_Propi= entry.getValue().occurances;
+			final double no_type_Propi = propsNum;
+			final double no_occerances_Propi= entry.getValue().occurances;
 			propertyWeight = (-(Math.log(no_type_Propi/(ntypesDBP+1)))/(Math.log(2)))*(Math.sqrt(no_occerances_Propi/totalOccurances));
 
 			totalWeight += propertyWeight;
-			weightPerProperty.put(entry.getKey(), propertyWeight);
+			weightPerProperty.put(propName, propertyWeight);
 			
 			propWeights.add(propertyWeight);
-		} else notFoundProps.add(entry.getKey());
+		} else notFoundProps.add(propName);
 	}
 	Collections.sort(propWeights);
 	//Calculating the Median
