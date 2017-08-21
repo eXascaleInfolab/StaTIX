@@ -145,7 +145,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	
 	//Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in DBpedia***********************************************
 	
-	HashMap<String, Integer> propertiesTypesNum = new HashMap<String, Integer>(properties.size(), 0.8f);
+	HashMap<String, Integer> propertiesTypesNum = new HashMap<String, Integer>(properties.size(), 1);
 	int ntypesDBP = 0;
 	Iterator mapIt = properties.entrySet().iterator();
 	
@@ -181,7 +181,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	instanceTypesNum.clear();
 	
 	//******************************************************************PropertyWeighCalculation********************************************************
-	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 0.8f);
+	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 1);
 	double propertyWeight = 0, totalWeight = 0;
 	int foundProps = 0;
 	Iterator propIt = properties.entrySet().iterator();
