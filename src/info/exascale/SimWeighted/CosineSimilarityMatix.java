@@ -19,9 +19,9 @@ import java.util.Map.Entry;
 
 public class CosineSimilarityMatix {
 public static final String typeProperty = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
-public static TreeMap<String, Property> properties = new TreeMap<String, Property>();
+public static TreeMap<String, Property> properties = new TreeMap<String, Property>();  // Note: used only on datasets loading
 public static TreeMap<String, InstanceProperties> instanceListPropertiesTreeMap = new TreeMap<String, InstanceProperties>();
-public static HashMap<String, Double> weightsForEachProperty = null;
+public static HashMap<String, Double> weightsForEachProperty = null;  // Used in similarity evaluation
 static int totalOccurances = 0; 
 
 // Output id mapping if required (idMapFName != null)
@@ -97,16 +97,16 @@ public static void readDataSet1(String N3DataSet, String idMapFName) throws IOEx
 }
 
 static class InstPropsStat {
-	public TreeSet<String>  properties = null;  // new TreeSet<String>()
+	// Note: TreeSet consumes too much
+	public ArrayList<String>  properties = null;
 	public int  typeCount = 0;
 }
 	
-public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOException {
+public static TreeMap<String, InstPropsStat> loadInstanceProperties(String N3DataSet) throws IOException {
 	//TreeMap key=instanceName and the value= List Of Properties of the key.
-	TreeMap<String, InstPropsStat> mapInstanceProperties = new TreeMap<String, InstPropsStat>();
+	TreeMap<String, InstPropsStat>  instProps = new TreeMap<String, InstPropsStat>();
 	TreeSet<String>  allprops = new TreeSet<String>();  // All properties of the second dataset
-	FileReader fileReader = new FileReader(N3DataSet);
-	BufferedReader bufferedReader = new BufferedReader(fileReader);
+	BufferedReader bufferedReader = new BufferedReader(new FileReader(N3DataSet));
 	String line = null;
 	while ((line = bufferedReader.readLine()) != null) {
 		if (line.isEmpty())
@@ -123,47 +123,68 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		}
 		
 		final String instance = s[0];
-		InstPropsStat propstat = mapInstanceProperties.get(instance);
+		InstPropsStat propstat = instProps.get(instance);
 		if (propstat == null) {
 			propstat = new InstPropsStat();
-			mapInstanceProperties.put(instance, propstat);
+			instProps.put(instance, propstat);
 		}
 		if (!isTyped) {
 			if (propstat.properties == null)
-				propstat.properties = new TreeSet<String>();
+				propstat.properties = new ArrayList<String>();
 			// Update all props and get the property from the existing object
 			String propname = s[1];
 			if(!allprops.add(propname))
 				propname = allprops.tailSet(propname).first();
-			propstat.properties.add(propname);
+			int pos = 0;
+			if(!propstat.properties.isEmpty()) {
+				pos = Collections.binarySearch(propstat.properties, propname);
+				if(pos < 0)
+					pos = -pos - 1;
+			}
+			propstat.properties.add(pos, propname);
 		} else ++propstat.typeCount;
 	
 	}
 	bufferedReader.close();
 	allprops = null;
-	
+	return instProps;
+}
+
+// Cut negative numbers to zero
+private static int cutneg(int a)
+{
+	return a >= 0 ? a : 0;
+}
+
+public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOException {
+	TreeMap<String, InstPropsStat> mapInstanceProperties = loadInstanceProperties(N3DataSet);
 	//Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in DBpedia***********************************************
 	
 	HashMap<String, Integer> propertiesTypesNum = new HashMap<String, Integer>(properties.size(), 1);
 	int ntypesDBP = 0;
 	Iterator mapIt = properties.entrySet().iterator();
+	final int linSearchLim = 9;  // Max number of items when linear search is faster that binary search
 	
 	while(mapIt.hasNext()) {
 		int value = 0;
 		Map.Entry<String, Property> entry = (Entry<String, Property>) mapIt.next();
+		final String propname = entry.getKey();
 		// System.out.println(String.format(" ************* Property : %s **************", entry.getValue().key));
 		Iterator mapInstPropIt = mapInstanceProperties.entrySet().iterator();
 		
 		while(mapInstPropIt.hasNext()) {
 			Map.Entry<String, InstPropsStat> instPropsEntry = (Entry<String, InstPropsStat>) mapInstPropIt.next();
 			InstPropsStat propstat = instPropsEntry.getValue();
-			if (propstat != null && propstat.properties != null && propstat.properties.contains(entry.getKey())) {
+			if (propstat == null || propstat.properties == null)
+				continue;
+			if(propstat.properties.size() <= linSearchLim ? propstat.properties.contains(propname)
+			: propstat.properties.get(cutneg(Collections.binarySearch(propstat.properties, propname))) == propname) {
 				value += propstat.typeCount;
 				//if (nt>0) System.out.println(String.format("%s : %d", instPropsEntry.getKey(), nt));
 			}
 		}
 		//System.out.println("" +value) ;
-		propertiesTypesNum.put(entry.getKey(), value);
+		propertiesTypesNum.put(propname, value);
 		ntypesDBP += value;
 		//mapIt.remove();
 	}

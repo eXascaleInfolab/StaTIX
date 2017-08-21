@@ -122,6 +122,7 @@ public class main {
 				throw exeption;
 			}
 		}
+		CosineSimilarityMatix.properties = null;
 		if(tracingOn)
 			System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = " + weightPerProperty.get("<http://www.w3.org/2002/07/owl#sameAs>"));
 		CosineSimilarityMatix.weightsForEachProperty = weightPerProperty;
@@ -155,20 +156,19 @@ public class main {
 	public static void readDataSet2(String N3DataSet) throws IOException {
 		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readDataSet2(N3DataSet);
 	}
-			
-	public static void Statix(String outputPath, float scale, boolean fineGrained, boolean filteringOn) throws Exception {
-		System.err.println("Calling the clustering lib...");
+
+	public static Graph buildGraph() {
 		Set<String> instances = CosineSimilarityMatix.instanceListPropertiesTreeMap.keySet();
 		final int n = instances.size();
-		Graph gr= new Graph(n);
+		Graph gr = new Graph(n);
 		InpLinks grInpLinks  = new InpLinks();
 
-		int i = 0;
-		int j = 0;
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
 		// so even for the symmetric matrix all iterations should be done
+		int i = 0;
 		for (String inst1: instances) {
 			final long  sid = CosineSimilarityMatix.instanceListPropertiesTreeMap.get(inst1).id;  // Source node id
+			int j = 0;
 			for (String inst2: instances) {
 				if(j > i) {
 					double  weight = CosineSimilarityMatix.similarity(inst1, inst2);
@@ -185,8 +185,16 @@ public class main {
 			++i;
 		}
 		grInpLinks = null;
+		CosineSimilarityMatix.weightsForEachProperty = null;
+		instances = null;
+		CosineSimilarityMatix.weightsForEachProperty = null;
 		System.err.println("Input graph formed");
-		//clustring and output
+		return gr;
+	}
+	
+	public static void Statix(String outputPath, float scale, boolean fineGrained, boolean filteringOn) throws Exception {
+		System.err.println("Calling the clustering lib...");
+		Graph gr = buildGraph();
 		OutputOptions outpopts = new OutputOptions();
 		final short outpflag = (short)(fineGrained
 			? 0x45  // ALLCLS | SIMPLE
@@ -209,5 +217,6 @@ public class main {
 	public static void LoadDatasets(String dataPath, String dataPath2, boolean filteringOn, String idMapFName) throws Exception {
 		readDataSet1(dataPath, filteringOn, idMapFName);
 		readDataSet2(dataPath2);
+		CosineSimilarityMatix.properties = null;
 	}
 }
