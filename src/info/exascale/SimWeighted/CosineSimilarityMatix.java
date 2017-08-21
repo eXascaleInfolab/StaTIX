@@ -102,12 +102,11 @@ static class InstPropsStat {
 }
 	
 public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOException {
-	
 	//TreeMap key=instanceName and the value= List Of Properties of the key.
 	TreeMap<String, InstPropsStat> mapInstanceProperties = new TreeMap<String, InstPropsStat>();
+	TreeSet<String>  allprops = new TreeSet<String>();  // All properties of the second dataset
 	FileReader fileReader = new FileReader(N3DataSet);
 	BufferedReader bufferedReader = new BufferedReader(fileReader);
-	int typeCount = 0;
 	String line = null;
 	while ((line = bufferedReader.readLine()) != null) {
 		if (line.isEmpty())
@@ -121,7 +120,6 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		boolean isTyped = false;
 		if (s[1].contains(CosineSimilarityMatix.typeProperty)) {
 			isTyped = true;
-			typeCount++;
 		}
 		
 		final String instance = s[0];
@@ -133,12 +131,16 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		if (!isTyped) {
 			if (propstat.properties == null)
 				propstat.properties = new TreeSet<String>();
-			propstat.properties.add(s[1]);
+			// Update all props and get the property from the existing object
+			String propname = s[1];
+			if(!allprops.add(propname))
+				propname = allprops.tailSet(propname).first();
+			propstat.properties.add(propname);
 		} else ++propstat.typeCount;
 	
 	}
 	bufferedReader.close();
-	
+	allprops = null;
 	
 	//Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in DBpedia***********************************************
 	

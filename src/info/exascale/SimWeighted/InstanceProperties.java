@@ -9,8 +9,8 @@ public class InstanceProperties {
 	public boolean isTyped = false;
 	private static final boolean isDbg = false;
 	
-	// Note: the set will be empty if the instance has only the #type properties, but this is a very rare use-case
-	public TreeSet<String> propertySet=new TreeSet<String>();
+	// Note: the set will be empty if the instance has only the #type properties, but this is a very rare usecase
+	public TreeSet<String> propertySet = new TreeSet<String>();
 	
 	 
 	public InstanceProperties(int id, String property) throws Exception
