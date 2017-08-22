@@ -46,15 +46,45 @@ OUTDIR=${1:-.}  # Output directory for the executable package
 CLSDIR="$OUTDIR"/classes  # Classes output directory
 APP=statix  # App name
 
-# Compile, exit on error
-echo "Compiling the classes in the \"$CLSDIR\"..."
-javac -cp lib/\*:src -d "$CLSDIR" src/info/exascale/SimWeighted/*.java
-# Manual compilation of the specific class:
-# $ javac -cp lib/\*:src -d classes/ src/info/exascale/SimWeighted/main.java
+# Set revision to the sources
+REV="`git rev-parse HEAD`"
+MAINFILE="src/info/exascale/SimWeighted/main.java"
+MARKER='^\(\s*public static final String clirev = \"\)'
+# Check whether build is outside the repository
 if [ $? -ne 0 ]
 then
-	echo "Build failed, errcode: $?"
-	exit $?
+	REV=""
+else
+	# Check whether the last commit is modified
+	git diff-index --quiet HEAD --
+	if [ $? ]
+	then
+		REV="$REV+"
+	fi
+	# Substitute revision to the sources
+	# Note: return 1 if the substitution has not been made
+	sed -i "/${MARKER}/"',$'"{s/${MARKER}[^\"]*\"/\1$REV\"/;b}"';$q1' "$MAINFILE"
+	if [ $? -ne 0 ]
+	then
+		echo "Error: revision marker was not found in the $MAINFILE"
+		exit 0
+	fi
+fi
+# Compile, exit on error
+echo "Compiling the classes in the \"$CLSDIR\", revision: $REV..."
+javac -cp lib/\* -sourcepath src -d "$CLSDIR" src/info/exascale/SimWeighted/*.java
+ERRCOMPILE=$?
+# Recover the original sources
+if [ -n "$REV" ]
+then
+	sed -i "s/${MARKER}[^\"]*\"/\1\"/" "$MAINFILE"
+fi
+# Manual compilation of the specific class:
+# $ javac -cp lib/\*:src -d classes/ src/info/exascale/SimWeighted/main.java
+if [ $ERRCOMPILE -ne 0 ]
+then
+	echo "Build failed, errcode: $ERRCOMPILE"
+	exit $ERRCOMPILE
 fi
 
 # Make the jar file ------------------------------------------------------------

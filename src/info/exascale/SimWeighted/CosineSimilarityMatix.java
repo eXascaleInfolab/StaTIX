@@ -228,6 +228,8 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		
 //*********************************************Calculating Cosin Similarity****************************************************************
  public static double similarity(String instance1, String instance2) {
+		if (instance1 == instance2)
+			return 1;
 		double inst1TotWeight = 0;
 		double inst2TotWeight = 0;
 		double powerCommon =0;
@@ -241,7 +243,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			//tempTreeSet.clear();
 		}
 		
-		if((instance1Properties.isEmpty()) && (instance2Properties.isEmpty()))
+		if(instance1Properties.isEmpty() && instance2Properties.isEmpty())
 			return 1;
 
 		for(String prop1: instance1Properties) {

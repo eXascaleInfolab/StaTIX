@@ -26,6 +26,7 @@ public class main {
 		System.loadLibrary("daoc");
 	}
 
+	public static final String clirev = "";  // ATTENTION: Substituted during the build
 	private static final String Static = null;
 	private static final boolean  tracingOn = false;  // Enable tracing
 	
@@ -36,9 +37,11 @@ public class main {
 		options.addOption("g", "ground-truth", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties)");
 		options.addOption("o", "output", true, "Output file, default: <inpfile>.cnl");
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id>	<subject_name>), default: disabled");
-		options.addOption("a", "all-scales", false, "Fine-grained type inference on all scales besides the macro scale");
-		options.addOption("s", "scale", true, "Scale (gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
+		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (hierarchy levels) besides the macro scale (top level, root)");
+		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
+		options.addOption("r", "reduce", false, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Recommended for large datasets or for the coarse-grained type inference (if all-scales is off)");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
+		options.addOption("v", "version", false, "Show version");
 		
 		HelpFormatter formatter = new HelpFormatter();
 		String[] argsOpt = new String[]{"args"};
@@ -47,10 +50,17 @@ public class main {
 		final String reference = "\nSee details in https://github.com/eXascaleInfolab/StaTIX";
 		
 		try {
-			CommandLine cmd = parser.parse(options, args);
+			CommandLine cmd = parser.parse(options, args);			
 			// Check for the help option
 			if(cmd.hasOption("h")) {
 				formatter.printHelp(appusage, desription, options, reference);
+				System.exit(0);
+			}
+			
+			// Check for the version
+			if(cmd.hasOption("v")) {
+				//"Rev: "
+				System.out.println(clirev);
 				System.exit(0);
 			}
 			
@@ -97,7 +107,7 @@ public class main {
 			}
 			
 			// Perform type inference
-			Statix(outpfile, scale, cmd.hasOption("a"), filteringOn);
+			Statix(outpfile, scale, cmd.hasOption("m"), cmd.hasOption("r"), filteringOn);
 		}
 		catch (ParseException | IllegalArgumentException e) {
 			e.printStackTrace();
@@ -157,10 +167,13 @@ public class main {
 		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readDataSet2(N3DataSet);
 	}
 
-	public static Graph buildGraph() {
+	public static Graph buildGraph(final boolean reduced) {
 		Set<String> instances = CosineSimilarityMatix.instanceListPropertiesTreeMap.keySet();
 		final int n = instances.size();
-		Graph gr = new Graph(n);
+
+		if (reduced)
+			throw new UnsupportedOperationException("The reduction has not been implemented yet");		
+		Graph gr = new Graph(n);  // To be implemented: Graph(n, reduced);
 		InpLinks grInpLinks  = new InpLinks();
 
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
@@ -171,11 +184,11 @@ public class main {
 			int j = 0;
 			for (String inst2: instances) {
 				if(j > i) {
-					double  weight = CosineSimilarityMatix.similarity(inst1, inst2);
-					long did = CosineSimilarityMatix.instanceListPropertiesTreeMap.get(inst2).id;
+					final float  weight = (float)CosineSimilarityMatix.similarity(inst1, inst2);
+					final long did = CosineSimilarityMatix.instanceListPropertiesTreeMap.get(inst2).id;
 					//System.out.print(" " + did + ":" + weight);
 
-					grInpLinks.add(new InpLink(did, (float)weight));
+					grInpLinks.add(new InpLink(did, weight));
 				}
 				++j;
 			}
@@ -192,11 +205,11 @@ public class main {
 		return gr;
 	}
 	
-	public static void Statix(String outputPath, float scale, boolean fineGrained, boolean filteringOn) throws Exception {
+	public static void Statix(String outputPath, float scale, boolean multiLev, boolean reduced, boolean filteringOn) throws Exception {
 		System.err.println("Calling the clustering lib...");
-		Graph gr = buildGraph();
+		Graph gr = buildGraph(reduced);
 		OutputOptions outpopts = new OutputOptions();
-		final short outpflag = (short)(fineGrained
+		final short outpflag = (short)(multiLev
 			? 0x45  // ALLCLS | SIMPLE
 			: 0x41);  // ROOT | SIMPLE
 		outpopts.setClsfmt(outpflag);
