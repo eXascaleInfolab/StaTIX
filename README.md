@@ -59,8 +59,6 @@ Options:
                            scale (<=1 for the macro clustering); default:
                            -1
  -v,--version              Show version
-
-See details in https://github.com/eXascaleInfolab/StaTIX
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  

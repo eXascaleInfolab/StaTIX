@@ -243,8 +243,11 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			//tempTreeSet.clear();
 		}
 		
-		if(instance1Properties.isEmpty() && instance2Properties.isEmpty())
-			return 1;
+		if(instance1Properties.isEmpty() || instance2Properties.isEmpty()) {
+			if(instance1Properties.isEmpty() && instance2Properties.isEmpty())
+				return 1;
+			return 0;
+		}
 
 		for(String prop1: instance1Properties) {
 			Double weight = weightsForEachProperty.get(prop1);

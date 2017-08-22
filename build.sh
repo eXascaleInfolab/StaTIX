@@ -80,7 +80,7 @@ then
 	sed -i "s/${MARKER}[^\"]*\"/\1\"/" "$MAINFILE"
 fi
 # Manual compilation of the specific class:
-# $ javac -cp lib/\*:src -d classes/ src/info/exascale/SimWeighted/main.java
+# $ javac -cp lib/\* -sourcepath src -d classes/ src/info/exascale/SimWeighted/main.java
 if [ $ERRCOMPILE -ne 0 ]
 then
 	echo "Build failed, errcode: $ERRCOMPILE"

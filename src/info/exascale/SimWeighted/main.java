@@ -120,7 +120,7 @@ public class main {
 			// Perform type inference
 			Statix(outpfile, scale, cmd.hasOption("m"), cmd.hasOption("r"), filteringOn);
 		}
-		catch (ParseException | IllegalArgumentException e) {
+		catch (ParseException e) {  //  | IllegalArgumentException
 			e.printStackTrace();
 			formatter.printHelp(appusage, desription, options, reference);
 			System.exit(1);
@@ -196,8 +196,12 @@ public class main {
 			for (String inst2: instances) {
 				if(j > i) {
 					final float  weight = (float)CosineSimilarityMatix.similarity(inst1, inst2);
+					if(weight == 0)
+						continue;
 					final long did = CosineSimilarityMatix.instanceListPropertiesTreeMap.get(inst2).id;
 					//System.out.print(" " + did + ":" + weight);
+					//if(weight <= 0 || Float.isNaN(weight))
+					//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
 
 					grInpLinks.add(new InpLink(did, weight));
 				}
