@@ -47,7 +47,7 @@ CLSDIR="$OUTDIR"/classes  # Classes output directory
 APP=statix  # App name
 
 # Set revision to the sources
-REV="`git rev-parse HEAD`"
+REV="`git rev-parse HEAD`(`git log -1 --format=%ci --`)"
 MAINFILE="src/info/exascale/SimWeighted/main.java"
 MARKER='^\(\s*public static final String clirev = \"\)'
 # Check whether build is outside the repository

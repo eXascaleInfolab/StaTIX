@@ -39,7 +39,7 @@ public class main {
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id>	<subject_name>), default: disabled");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
-		options.addOption("r", "reduce", false, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Recommended for large datasets or for the coarse-grained type inference (if all-scales is off)");
+		options.addOption("r", "reduce", false, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Recommended for large datasets or for the coarse-grained type inference (if multi-level is off)");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		options.addOption("v", "version", false, "Show version");
 		
@@ -59,8 +59,19 @@ public class main {
 			
 			// Check for the version
 			if(cmd.hasOption("v")) {
-				//"Rev: "
-				System.out.println(clirev);
+				// Convert <revision>(<date>)[+] to the pure revision + date
+				String clirevPure = clirev;
+				String clirevTime = "";
+				final int ibdate = clirevPure.indexOf('(');
+				if(ibdate >= 0) {
+					final int iedate = clirevPure.indexOf(')');
+					clirevTime = clirev.substring(ibdate + 1, iedate);
+					clirevPure = clirev.substring(0, ibdate) + clirev.substring(iedate + 1);
+				}
+				
+				System.out.println("r-" + daoc.libBuild().rev() + "." + clirevPure);
+				System.out.println("= Client Build =\nRevision: " + clirevPure + "\nTime: " + clirevTime);
+				System.out.println("= Library Build =\n" + daoc.libBuild().summary());
 				System.exit(0);
 			}
 			

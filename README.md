@@ -31,11 +31,7 @@ The output results are clusters in the [.cnl format](https://github.com/eXascale
 ./run.sh  -h
 Usage: ./run.sh [OPTIONS...] <inputfile.rdf>
 Statistical type inference in fully automatic and semi supervised modes
-Options:[OPTIONS...] <inputfile.rdf>
-Statistical type inference in fully automatic and semi supervised modes
 Options:
- -a,--all-scales           Fine-grained type inference on all scales
-                           besides the macro scale
  -f,--filter               Filter out from the resulting clusters all
                            subjects that do not have #type property in the
                            input dataset, used for the type inference
@@ -44,11 +40,27 @@ Options:
                            dataset or another similar dataset with the
                            specified type properties)
  -h,--help                 Show usage
+ -m,--multi-level          Output type inference for multiple scales
+                           (hierarchy levels) besides the macro scale (top
+                           level, root)
+ -n,--id-name <arg>        Output map of the id names (<inpfile>.idm in
+                           tab separated format: <id>
+                           <subject_name>), default: disabled
  -o,--output <arg>         Output file, default: <inpfile>.cnl
- -s,--scale <arg>          Scale (gamma parameter of the clustering), -1
-                           is automatic scale inference for each cluster,
-                           >=0 is the forced static scale (<=1 for the
-                           macro clustering); default: -1
+ -r,--reduce               Reduce similarity matrix on graph construction
+                           by non-significant relations to reduce memory
+                           consumption and speedup the clustering.
+                           Recommended for large datasets or for the
+                           coarse-grained type inference (if multi-level is
+                           off)
+ -s,--scale <arg>          Scale (resolution, gamma parameter of the
+                           clustering), -1 is automatic scale inference
+                           for each cluster, >=0 is the forced static
+                           scale (<=1 for the macro clustering); default:
+                           -1
+ -v,--version              Show version
+
+See details in https://github.com/eXascaleInfolab/StaTIX
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  
