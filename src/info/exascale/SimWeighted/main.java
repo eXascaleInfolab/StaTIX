@@ -187,7 +187,7 @@ public class main {
 		grInpLinks = null;
 		CosineSimilarityMatix.weightsForEachProperty = null;
 		instances = null;
-		CosineSimilarityMatix.weightsForEachProperty = null;
+		CosineSimilarityMatix.instanceListPropertiesTreeMap = null;
 		System.err.println("Input graph formed");
 		return gr;
 	}

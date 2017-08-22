@@ -228,58 +228,43 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		
 //*********************************************Calculating Cosin Similarity****************************************************************
  public static double similarity(String instance1, String instance2) {
-		double instance1TotalWeight1 = 0;
-		double instance1TotalWeight2 = 0;
-
-		double powerWeight1=0;
-		double powerWeight2=0;
+		double inst1TotWeight = 0;
+		double inst2TotWeight = 0;
 		double powerCommon =0;
-		TreeSet<String> instance1Properties= instanceListPropertiesTreeMap.get(instance1).propertySet;
-		TreeSet<String> instance2Properties= instanceListPropertiesTreeMap.get(instance2).propertySet;
-		int sizeListProperty1=instance1Properties.size();
-		int sizeListProperty2=instance2Properties.size();
 
-		if (sizeListProperty1>sizeListProperty2) {
+		TreeSet<String> instance1Properties = instanceListPropertiesTreeMap.get(instance1).propertySet;
+		TreeSet<String> instance2Properties = instanceListPropertiesTreeMap.get(instance2).propertySet;
+		if (instance1Properties.size() > instance2Properties.size()) {
 			TreeSet<String> tempTreeSet = instance1Properties;
-			
 			instance1Properties = instance2Properties;
 			instance2Properties = tempTreeSet;
 			//tempTreeSet.clear();
 		}
 		
-		String lastInstance1Prop;
 		if((instance1Properties.isEmpty()) && (instance2Properties.isEmpty()))
 			return 1;
 
 		for(String prop1: instance1Properties) {
-			double weight = 0;
-			if (weightsForEachProperty.get(prop1) != null)
-				weight= weightsForEachProperty.get(prop1);
-			powerWeight1 += weight*weight;
-
-			boolean found = false;
-			for(String prop2: instance2Properties) {
-				if (prop2.contains(prop1)) {
-					found = true;
-					break;
-				}
-			}
-
-			if (found)
-				powerCommon += weight*weight;
+			Double weight = weightsForEachProperty.get(prop1);
+			if(weight == null)
+				continue;
+			weight *= weight;
+			inst1TotWeight += weight;
+			if(instance2Properties.contains(prop1))
+				powerCommon += weight;
 		}
-
-		instance1TotalWeight1 = Math.sqrt(powerWeight1);
+		inst1TotWeight = Math.sqrt(inst1TotWeight);
 
 		for(String prop2: instance2Properties) {
-			if (weightsForEachProperty.get(prop2) != null) {
-				final double weight = weightsForEachProperty.get(prop2);
-				powerWeight2 += weight*weight;
-			}
+			Double weight = weightsForEachProperty.get(prop2);
+			if(weight == null)
+				continue;
+			weight *= weight;
+			inst2TotWeight += weight;
 		}
-		instance1TotalWeight2= Math.sqrt(powerWeight2);
+		inst2TotWeight = Math.sqrt(inst2TotWeight);
 		//   System.out.print(powerlist);
-		final double similarity = powerCommon / (instance1TotalWeight1 * instance1TotalWeight2);
+		final double similarity = powerCommon / (inst1TotWeight * inst2TotWeight);
 
 		//  System.out.println("Results: "+instance1+" "+instance2+" "+powerCommon+" /{ "+instance1TotalWeight1+" * "+instance1TotalWeight2+" } ");
 		//if(tracingOn) {
