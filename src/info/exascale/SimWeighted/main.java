@@ -225,10 +225,13 @@ public class main {
 		Graph gr = buildGraph(reduced);
 		OutputOptions outpopts = new OutputOptions();
 		final short outpflag = (short)(multiLev
-			? 0x45  // ALLCLS | SIMPLE
+			? 0x43  // CUSTLEVS | SIMPLE  // Note: CUSTLEVS respect clsrstep
+			//? 0x45  // ALLCLS | SIMPLE
 			: 0x41);  // ROOT | SIMPLE
 		outpopts.setClsfmt(outpflag);
-		outpopts.setClsrstep(0.382f);  // 1 - 0.618f
+		outpopts.setClsrstep(0.618f);  // 0.368f (e^-1); 0.618f (golden ratio)
+		outpopts.setLevmarg((short)0x4);  // LEVSTEPNUM, relative to clrstep
+		outpopts.setMargmin(1);  // Omit the bottom level, start from the following one having not more than clrstep * btmlevcls clusters
 		outpopts.setClsfile(outputPath);
 		outpopts.setFltMembers(filteringOn);
 
