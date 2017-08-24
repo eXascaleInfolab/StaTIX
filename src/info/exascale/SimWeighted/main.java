@@ -178,13 +178,10 @@ public class main {
 		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readDataSet2(N3DataSet);
 	}
 
-	public static Graph buildGraph(final boolean reduced) {
+	public static Graph buildGraph(final short reduction) {
 		Set<String> instances = CosineSimilarityMatix.instanceListPropertiesTreeMap.keySet();
 		final int n = instances.size();
-
-		if (reduced)
-			throw new UnsupportedOperationException("The reduction has not been implemented yet");		
-		Graph gr = new Graph(n);  // To be implemented: Graph(n, reduced);
+		Graph gr = new Graph(n, daoc.toReduction(reduction));  // To be implemented: Graph(n, reduced);
 		InpLinks grInpLinks  = new InpLinks();
 
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
@@ -222,7 +219,11 @@ public class main {
 	
 	public static void Statix(String outputPath, float scale, boolean multiLev, boolean reduced, boolean filteringOn) throws Exception {
 		System.err.println("Calling the clustering lib...");
-		Graph gr = buildGraph(reduced);
+		short reduction = (short)(reduced
+			? 0x2  // MEAN
+			: 0);  // NONE
+		Graph gr = buildGraph(reduction);
+		reduction |= 0x10;  // SKIP_NODES as already reduced in the graph
 		OutputOptions outpopts = new OutputOptions();
 		final short outpflag = (short)(multiLev
 			? 0x43  // CUSTLEVS | SIMPLE  // Note: CUSTLEVS respect clsrstep
@@ -230,7 +231,7 @@ public class main {
 			: 0x41);  // ROOT | SIMPLE
 		outpopts.setClsfmt(outpflag);
 		outpopts.setClsrstep(0.618f);  // 0.368f (e^-1); 0.618f (golden ratio)
-		outpopts.setLevmarg((short)0x4);  // LEVSTEPNUM, relative to clrstep
+		outpopts.setLevmarg(daoc.toLevMargKind((short)0x4));  // LEVSTEPNUM, relative to clrstep
 		outpopts.setMargmin(1);  // Omit the bottom level, start from the following one having not more than clrstep * btmlevcls clusters
 		outpopts.setClsfile(outputPath);
 		outpopts.setFltMembers(filteringOn);
@@ -238,6 +239,8 @@ public class main {
 		System.err.println("Starting the hierarchy building");
 		ClusterOptions  cops = new ClusterOptions();
 		cops.setGamma(scale);
+		//reduction |= 0x10;  // SKIP_NODES, because they are already reduced from the graph
+		cops.setReduction(daoc.toReduction(reduction));
 		Hierarchy hr = gr.buildHierarchy(cops);
 		System.err.println("Starting the hierarchy output");
 		hr.output(outpopts);
