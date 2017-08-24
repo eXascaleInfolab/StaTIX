@@ -231,7 +231,7 @@ public class main {
 			: 0x41);  // ROOT | SIMPLE
 		outpopts.setClsfmt(outpflag);
 		outpopts.setClsrstep(0.618f);  // 0.368f (e^-1); 0.618f (golden ratio)
-		outpopts.setLevmarg(daoc.toLevMargKind((short)0x4));  // LEVSTEPNUM, relative to clrstep
+		outpopts.setLevmarg(daoc.toLevMargKind((short)0xff));  // LEVSTEPNUM, relative to clrstep
 		outpopts.setMargmin(1);  // Omit the bottom level, start from the following one having not more than clrstep * btmlevcls clusters
 		outpopts.setClsfile(outputPath);
 		outpopts.setFltMembers(filteringOn);
