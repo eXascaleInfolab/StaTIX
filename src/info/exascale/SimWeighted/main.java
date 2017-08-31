@@ -37,9 +37,9 @@ public class main {
 		options.addOption("g", "ground-truth", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties)");
 		options.addOption("o", "output", true, "Output file, default: <inpfile>.cnl");
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id>	<subject_name>), default: disabled");
-		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (hierarchy levels) besides the macro scale (top level, root)");
+		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
-		options.addOption("r", "reduce", false, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Recommended for large datasets or for the coarse-grained type inference (if multi-level is off)");
+		options.addOption("r", "reduce", false, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Recommended for large datasets.");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		options.addOption("v", "version", false, "Show version");
 		
@@ -220,18 +220,20 @@ public class main {
 	public static void Statix(String outputPath, float scale, boolean multiLev, boolean reduced, boolean filteringOn) throws Exception {
 		System.err.println("Calling the clustering lib...");
 		short reduction = (short)(reduced
-			? 0x2  // MEAN
+			? 0x2  // MEAN; 0x1 - ACCURATE
 			: 0);  // NONE
 		Graph gr = buildGraph(reduction);
 		reduction |= 0x10;  // SKIP_NODES as already reduced in the graph
 		OutputOptions outpopts = new OutputOptions();
 		final short outpflag = (short)(multiLev
-			? 0x43  // CUSTLEVS | SIMPLE  // Note: CUSTLEVS respect clsrstep
-			//? 0x45  // ALLCLS | SIMPLE
-			: 0x41);  // ROOT | SIMPLE
+			? 0x4A  // SIMPLE | SIGNIFICANT  (0xA - SIGNIF_OWNSHIER, 0xB - SIGNIF_OWNAHIER)
+			// ? 0x43  // SIMPLE | CUSTLEVS  // Note: CUSTLEVS respect clsrstep
+			//? 0x45  // SIMPLE | ALLCLS
+			: 0x41);  // SIMPLE | ROOT
 		outpopts.setClsfmt(outpflag);
+		// Note: clsrstep, levmarg, margmin actual only for the CUSTLEVS
 		outpopts.setClsrstep(0.618f);  // 0.368f (e^-1); 0.618f (golden ratio)
-		outpopts.setLevmarg(daoc.toLevMargKind((short)0xff));  // LEVSTEPNUM, relative to clrstep
+		outpopts.setLevmarg(daoc.toLevMargKind((short)0xff));  // LEVSTEPNUM, level steps relative to clrstep
 		outpopts.setMargmin(1);  // Omit the bottom level, start from the following one having not more than clrstep * btmlevcls clusters
 		outpopts.setClsfile(outputPath);
 		outpopts.setFltMembers(filteringOn);

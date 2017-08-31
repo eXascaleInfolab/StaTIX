@@ -1,5 +1,5 @@
 # StaTIX
-Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in N3 format. This is a Master Project of Soheil Roshankish.
+Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in the N3 or N-Quads format. This is a Master Project of Soheil Roshankish.
 
 \authors: (c) Soheil Roshankish, Artem Lutov <artem@exascale.info>  
 \license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
@@ -14,7 +14,7 @@ Statistical Type Inference (both fully automatic and semi supervised) for RDF da
 
 ## Overview
 
-StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either *a)* the sample of the processing dataset *prelabeled with the type* properties should be provided, or *b)* another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset. The input RDF dataset(s) should be specified in the [N3 format](https://www.w3.org/TeamSubmission/n3/): `<subject> <property> <object> .`.  
+StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either *a)* the sample of the processing dataset *prelabeled with the type* properties should be provided, or *b)* another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset. The input RDF dataset(s) should be specified in the [N3](https://www.w3.org/TeamSubmission/n3/)/[N4 (N-Quads)](https://www.w3.org/TR/n-quads/) formats: `<subject> <property> <object> .`.  
 Types that are clusters of the RDF triple subjects are identified in the scope of the whole input dataset with *automatic scale identification for each cluster*. The *scale* for all clusters can be manually forced in case specific macro or micro level clustering is required.  
 For the semi supervised mode, similarity between the RDF subjects is evaluated with respect to the #type properties using *TF-IDF based similarity weighting* for the weighted *cosin similarity*.
 
@@ -41,8 +41,9 @@ Options:
                            specified type properties)
  -h,--help                 Show usage
  -m,--multi-level          Output type inference for multiple scales
-                           (hierarchy levels) besides the macro scale (top
-                           level, root)
+                           (representative clusters from all hierarchy
+                           levels) besides the macro scale (top level,
+                           root)
  -n,--id-name <arg>        Output map of the id names (<inpfile>.idm in
                            tab separated format: <id>
                            <subject_name>), default: disabled
@@ -50,9 +51,7 @@ Options:
  -r,--reduce               Reduce similarity matrix on graph construction
                            by non-significant relations to reduce memory
                            consumption and speedup the clustering.
-                           Recommended for large datasets or for the
-                           coarse-grained type inference (if multi-level is
-                           off)
+                           Recommended for large datasets.
  -s,--scale <arg>          Scale (resolution, gamma parameter of the
                            clustering), -1 is automatic scale inference
                            for each cluster, >=0 is the forced static
@@ -63,8 +62,6 @@ Options:
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  
 To infer types on multiple resolution levels (besides the whole dataset scope): `./run.sh -a inpDataset.rdf`.
-
-> StaTIX uses all available relations to form similarity matrix, which causes *OutOfMemory* exception for the large datasets. If you would like to *use it for large datasets*, then you will need to reset all properties weights that are less than the median weight. This option might be added to the CLI interface soon...
 
 ### Compilation
 
