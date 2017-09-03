@@ -39,7 +39,7 @@ public class main {
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id>	<subject_name>), default: disabled");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
-		options.addOption("r", "reduce", false, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Recommended for large datasets.");
+		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets.");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		options.addOption("v", "version", false, "Show version");
 		
@@ -77,7 +77,7 @@ public class main {
 			
 			String[] files = cmd.getArgs();
 			if(files.length != 1)
-				throw new IllegalArgumentException("The argument is invalid");
+				throw new IllegalArgumentException("A single input dataset is expected with optimal parameters");
 
 			// Check for the filtering option
 			// ATTENTION: should be done before the input datasets reading
@@ -116,9 +116,19 @@ public class main {
 				if(scale != -1 && scale < 0)
 					throw new IllegalArgumentException("The scale parameter is out of the expected range");
 			}
+			// Reduction policy
+			char reduction = 'n';  // None
+			if(cmd.hasOption("r")) {
+				String val = cmd.getOptionValue("r");
+				if(!val.isEmpty()) {
+					if(val.length() >= 2 || "ams".indexOf(val.charAt(0)) == -1)
+						throw new IllegalArgumentException("The reduction parameter is out of the expected range");
+					reduction = val.charAt(0);
+				}
+			}
 			
 			// Perform type inference
-			Statix(outpfile, scale, cmd.hasOption("m"), cmd.hasOption("r"), filteringOn);
+			Statix(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn);
 		}
 		catch (ParseException e) {  //  | IllegalArgumentException
 			e.printStackTrace();
@@ -178,10 +188,10 @@ public class main {
 		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readDataSet2(N3DataSet);
 	}
 
-	public static Graph buildGraph(final short reduction) {
+	public static Graph buildGraph() {
 		Set<String> instances = CosineSimilarityMatix.instanceListPropertiesTreeMap.keySet();
 		final int n = instances.size();
-		Graph gr = new Graph(n, daoc.toReduction(reduction));  // To be implemented: Graph(n, reduced);
+		Graph gr = new Graph(n);
 		InpLinks grInpLinks  = new InpLinks();
 
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
@@ -217,13 +227,9 @@ public class main {
 		return gr;
 	}
 	
-	public static void Statix(String outputPath, float scale, boolean multiLev, boolean reduced, boolean filteringOn) throws Exception {
+	public static void Statix(String outputPath, float scale, boolean multiLev, char reduction, boolean filteringOn) throws Exception {
 		System.err.println("Calling the clustering lib...");
-		short reduction = (short)(reduced
-			? 0x2  // MEAN; 0x1 - ACCURATE
-			: 0);  // NONE
-		Graph gr = buildGraph(reduction);
-		reduction |= 0x10;  // SKIP_NODES as already reduced in the graph
+		Graph gr = buildGraph();
 		OutputOptions outpopts = new OutputOptions();
 		final short outpflag = (short)(multiLev
 			? 0x4A  // SIMPLE | SIGNIFICANT  (0xA - SIGNIF_OWNSHIER, 0xB - SIGNIF_OWNAHIER)
@@ -241,8 +247,19 @@ public class main {
 		System.err.println("Starting the hierarchy building");
 		ClusterOptions  cops = new ClusterOptions();
 		cops.setGamma(scale);
-		//reduction |= 0x10;  // SKIP_NODES, because they are already reduced from the graph
-		cops.setReduction(daoc.toReduction(reduction));
+		short rdcpolicy = 0;  // NONE
+		switch(reduction) {
+		case 'a':
+			rdcpolicy = (short)0x1;  // ACCURATE
+			break;
+		case 'm':
+			rdcpolicy = (short)0x2;  // MEAN
+			break;
+		case 's':
+			rdcpolicy = (short)0x3;  // SEVERE
+			break;
+		}
+		cops.setReduction(daoc.toReduction(rdcpolicy));
 		Hierarchy hr = gr.buildHierarchy(cops);
 		System.err.println("Starting the hierarchy output");
 		hr.output(outpopts);

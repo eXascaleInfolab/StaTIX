@@ -48,9 +48,10 @@ Options:
                            tab separated format: <id>
                            <subject_name>), default: disabled
  -o,--output <arg>         Output file, default: <inpfile>.cnl
- -r,--reduce               Reduce similarity matrix on graph construction
+ -r,--reduce <arg>         Reduce similarity matrix on graph construction
                            by non-significant relations to reduce memory
                            consumption and speedup the clustering.
+                           Options: a - accurate, m - mean, s - severe.
                            Recommended for large datasets.
  -s,--scale <arg>          Scale (resolution, gamma parameter of the
                            clustering), -1 is automatic scale inference
