@@ -21,7 +21,7 @@ For the semi supervised mode, similarity between the RDF subjects is evaluated w
 The output results are clusters in the [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members). Each cluster correspond to the type and has members represented by the subject ids. Subject ids are generated sequentially starting from `0` for all unique subjects in the input dataset.
 
 Accuracy of the StaTIX type inference (see details in [TInfES](https://github.com/eXascaleInfolab/TInfES)):
-![F1h](https://docs.google.com/spreadsheets/d/e/2PACX-1vShqU5Vs9GimVV5OXoZ50uFNwhGfySwNZGYFufKo-lyq5-FMDAZ77yYLcFbo_iOGa2kDe5a1bI6TCFj/pubchart?oid=1361126188&format=interactive)
+<iframe width="600" height="371" seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vShqU5Vs9GimVV5OXoZ50uFNwhGfySwNZGYFufKo-lyq5-FMDAZ77yYLcFbo_iOGa2kDe5a1bI6TCFj/pubchart?oid=1361126188&amp;format=interactive"></iframe>
 
 ## Requirements
 *StaTIX* uses *DAOC* clustering library and *Apache [Commons CLI](https://commons.apache.org/proper/commons-cli/)* arguments parser. Both libraries are included into the repository and located in the `/lib` dir.
