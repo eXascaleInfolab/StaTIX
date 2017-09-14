@@ -237,10 +237,10 @@ public class main {
 			//? 0x45  // SIMPLE | ALLCLS
 			: 0x41);  // SIMPLE | ROOT
 		outpopts.setClsfmt(outpflag);
-		// Note: clsrstep, levmarg, margmin actual only for the CUSTLEVS
-		outpopts.setClsrstep(0.618f);  // 0.368f (e^-1); 0.618f (golden ratio)
-		outpopts.setLevmarg(daoc.toLevMargKind((short)0xff));  // LEVSTEPNUM, level steps relative to clrstep
-		outpopts.setMargmin(1);  // Omit the bottom level, start from the following one having not more than clrstep * btmlevcls clusters
+		// Note: clsrstep, levmarg, margmin actual only for the CUSTLEVS, but strored in the same space as parameters for the multilev output in the latest versions of the DAOC
+		//outpopts.setClsrstep(0.618f);  // 0.368f (e^-1); 0.618f (golden ratio)
+		//outpopts.setLevmarg(daoc.toLevMargKind((short)0xff));  // LEVSTEPNUM, level steps relative to clrstep
+		//outpopts.setMargmin(1);  // Omit the bottom level, start from the following one having not more than clrstep * btmlevcls clusters
 		outpopts.setClsfile(outputPath);
 		outpopts.setFltMembers(filteringOn);
 

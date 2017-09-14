@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
+
 public class CosineSimilarityMatix {
 public static final String typeProperty = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 public static TreeMap<String, Property> properties = new TreeMap<String, Property>();  // Note: used only on datasets loading
@@ -217,8 +218,11 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		} else notFoundProps.add(propName);
 	}
 	Collections.sort(propWeights);
-	//Calculating the Median
-	double median = !propWeights.isEmpty() ? propWeights.get(propWeights.size() / 2) : 1;
+	// Calculating the Median
+	// Note: min(median, sqrt(avg_estim)) is used to take into account the case when only 1-2 properties are
+	// weighted and have the ~maximal weight, which results in too large mean.
+	double median = !propWeights.isEmpty()
+		? Math.min(propWeights.get(propWeights.size() / 2), 1 / Math.sqrt(properties.size())) : 1;
 	
 	for (String prop: notFoundProps)
 		weightPerProperty.put(prop, median);
