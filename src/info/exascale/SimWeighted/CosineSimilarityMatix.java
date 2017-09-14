@@ -209,7 +209,9 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			foundProps++;
 			final double no_type_Propi = propsNum;
 			final double no_occerances_Propi= entry.getValue().occurances;
-			propertyWeight = (-(Math.log(no_type_Propi/(ntypesDBP+1)))/(Math.log(2)))*(Math.sqrt(no_occerances_Propi/totalOccurances));
+			// Note: ntypesDBP+1 to avoid 0, resulting values E (0, ~64)
+			propertyWeight = (-(Math.log(no_type_Propi/(ntypesDBP+1)))/(Math.log(2)))
+				* (Math.sqrt(no_occerances_Propi/totalOccurances));
 
 			totalWeight += propertyWeight;
 			weightPerProperty.put(propName, propertyWeight);
@@ -217,15 +219,18 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			propWeights.add(propertyWeight);
 		} else notFoundProps.add(propName);
 	}
-	Collections.sort(propWeights);
-	// Calculating the Median
-	// Note: min(median, sqrt(avg_estim)) is used to take into account the case when only 1-2 properties are
+	Collections.sort(propWeights);  // Note: even for no_type_Propi/(ntypesDBP+1) -> 0  wmax < 64
+	
+	// Weight for the remained properties should be between the median and expected average for ALL properties
+	// Note: sqrt(median * avg_estim) is used to take into account the case when only 1-2 properties are
 	// weighted and have the ~maximal weight, which results in too large mean.
-	double median = !propWeights.isEmpty()
-		? Math.min(propWeights.get(propWeights.size() / 2), 1 / Math.sqrt(properties.size())) : 1;
+	final double wrem = !propWeights.isEmpty()
+		? Math.sqrt(propWeights.get(propWeights.size() / 2)  // Median
+			* ((double) propWeights.get(propWeights.size() - 1) / properties.size()))  // Expected average for all props = wmax / size
+		: 1;
 	
 	for (String prop: notFoundProps)
-		weightPerProperty.put(prop, median);
+		weightPerProperty.put(prop, wrem);
 	
 	return weightPerProperty;
 }
