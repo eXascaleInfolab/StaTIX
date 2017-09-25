@@ -23,7 +23,7 @@ public static final String typeProperty = "<http://www.w3.org/1999/02/22-rdf-syn
 public static TreeMap<String, Property> properties = new TreeMap<String, Property>();  // Note: used only on datasets loading
 public static TreeMap<String, InstanceProperties> instanceListPropertiesTreeMap = new TreeMap<String, InstanceProperties>();
 public static HashMap<String, Double> weightsForEachProperty = null;  // Used in similarity evaluation
-static int totalOccurances = 0; 
+static int totalOccurances = 0;  // Total number of occurrences of all properties in the input datasets (the number of triples)
 
 // Output id mapping if required (idMapFName != null)
 public CosineSimilarityMatix(String file1, String file2, String idMapFName) throws IOException
@@ -204,14 +204,13 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	while(propIt.hasNext()) {
 		Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
 		final String  propName = entry.getKey();
-		final Integer  propsNum = propertiesTypesNum.get(propName);
-		if(propsNum != 0) {
+		final double  propTypesNum = propertiesTypesNum.get(propName);
+		if(propTypesNum != 0) {
 			foundProps++;
-			final double no_type_Propi = propsNum;
-			final double no_occerances_Propi= entry.getValue().occurances;
+			final double occurPropi= entry.getValue().occurances;
 			// Note: ntypesDBP+1 to avoid 0, resulting values E (0, ~64)
-			propertyWeight = (-(Math.log(no_type_Propi/(ntypesDBP+1)))/(Math.log(2)))
-				* (Math.sqrt(no_occerances_Propi/totalOccurances));
+			propertyWeight = (1./ntypesDBP - Math.log(propTypesNum/(ntypesDBP)))
+				* Math.sqrt(occurPropi/totalOccurances);
 
 			totalWeight += propertyWeight;
 			weightPerProperty.put(propName, propertyWeight);
@@ -219,14 +218,14 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			propWeights.add(propertyWeight);
 		} else notFoundProps.add(propName);
 	}
-	Collections.sort(propWeights);  // Note: even for no_type_Propi/(ntypesDBP+1) -> 0  wmax < 64
+	Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesDBP+1) -> 0  wmax < 64
 	
-	// Weight for the remained properties should be between the median and expected average for ALL properties
+	// Weight for the remained properties should be between the median and expected mean for ALL properties
 	// Note: sqrt(median * avg_estim) is used to take into account the case when only 1-2 properties are
 	// weighted and have the ~maximal weight, which results in too large mean.
 	final double wrem = !propWeights.isEmpty()
 		? Math.sqrt(propWeights.get(propWeights.size() / 2)  // Median
-			* ((double) propWeights.get(propWeights.size() - 1) / properties.size()))  // Expected average for all props = wmax / size
+			* ((double) propWeights.get(0) / properties.size()))  // Expected mean for all props = wmax / size
 		: 1;
 	
 	for (String prop: notFoundProps)
