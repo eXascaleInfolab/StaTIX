@@ -47,7 +47,8 @@ CLSDIR="$OUTDIR"/classes  # Classes output directory
 APP=statix  # App name
 
 # Set revision to the sources
-REV="`git rev-parse HEAD`(`git log -1 --format=%ci --`)"
+# REV="`git rev-parse HEAD`(`git log -1 --format=%ci --`)"
+REV="`git log --pretty=format:'%h' -1`"
 MAINFILE="src/info/exascale/SimWeighted/main.java"
 MARKER='^\(\s*public static final String clirev = \"\)'
 # Check whether build is outside the repository
@@ -61,6 +62,7 @@ else
 	then
 		REV="$REV+"
 	fi
+	REV="$REV (`git log --pretty=format:'%ci' -1`)"  # Add time
 	# Substitute revision to the sources
 	# Note: return 1 if the substitution has not been made
 	sed -i "/${MARKER}/"',$'"{s/${MARKER}[^\"]*\"/\1$REV\"/;b}"';$q1' "$MAINFILE"
@@ -88,10 +90,13 @@ then
 fi
 
 # Make the jar file ------------------------------------------------------------
-echo Building the jar in the \"$OUTDIR\"...
+echo Building the ${APP}.jar in the \"$OUTDIR\" from \"$CLSDIR\"...
 # Note: other jars are not included to this one for the easier substitution of the components
 # and to avoid specification of the explicit manifest file (class path)
-jar -c -e info.exascale.SimWeighted.main -f "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
+# Adequate arguments are supported only by Java 9+
+# jar -c -e info.exascale.SimWeighted.main -f "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
+# Own syntax is required in Java8-
+jar -cef info.exascale.SimWeighted.main "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
 if [ $? -ne 0 ]
 then
 	echo "Build failed, errcode: $?"
