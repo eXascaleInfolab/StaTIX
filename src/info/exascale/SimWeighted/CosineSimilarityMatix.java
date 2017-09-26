@@ -198,7 +198,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	int foundProps = 0;
 	Iterator propIt = properties.entrySet().iterator();
 	ArrayList<String> notFoundProps = new ArrayList<String>();
-	// At least 10% of props usually belong to the typed instances
+	// Usually at least 10% of props belong to the typed instances in the labeled collection
 	ArrayList<Double> propWeights = new ArrayList<Double>(properties.size() / 10);
 
 	while(propIt.hasNext()) {
@@ -218,18 +218,21 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			propWeights.add(propertyWeight);
 		} else notFoundProps.add(propName);
 	}
-	Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesDBP+1) -> 0  wmax < 64
-	
-	// Weight for the remained properties should be between the median and expected mean for ALL properties
-	// Note: sqrt(median * avg_estim) is used to take into account the case when only 1-2 properties are
-	// weighted and have the ~maximal weight, which results in too large mean.
-	final double wrem = !propWeights.isEmpty()
-		? Math.sqrt(propWeights.get(propWeights.size() / 2)  // Median
-			* ((double) propWeights.get(0) / properties.size()))  // Expected mean for all props = wmax / size
-		: 1;
-	
+	propWeights.trimToSize();
+	if(!propWeights.isEmpty()) {
+		// Find the median and normalize to the median, which is the estimated weight for the remained properties
+		// The normalization is required, because the property weights are used in the cosine sim matrix,
+		// where they are squared, which  behaves differently for >1 and <1, so the median normalization
+		// is important
+		Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesDBP+1) -> 0  wmax < 64
+		final int pwsize = propWeights.size();
+		final double wmed = propWeights.get(pwsize / 2);
+		for (int i = 0; i < pwsize; ++i)
+			propWeights.set(i, propWeights.get(i) / wmed);
+	}
+	// Set remained weights to 1, which is the weight of the normalized median
 	for (String prop: notFoundProps)
-		weightPerProperty.put(prop, wrem);
+		weightPerProperty.put(prop, 1.);
 	
 	return weightPerProperty;
 }
