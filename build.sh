@@ -62,7 +62,7 @@ then
 else
 	# Check whether the last commit is modified
 	git diff-index --quiet HEAD --
-	if [ $? ]
+	if [ $? -ne 0 ]
 	then
 		# Note: it might have sence to add current time for the modified revision
 		REV="$REV+"  #  (`date --rfc-3339=seconds -u`)
