@@ -48,7 +48,11 @@ APP=statix  # App name
 
 # Set revision to the sources
 # REV="`git rev-parse HEAD`(`git log -1 --format=%ci --`)"
-REV="`git log --pretty=format:'%h' -1`"
+# The shortened hash of the current commit:
+# git rev-parse --short HEAD
+# or (the same as)
+# git log --pretty=format:'%h' -1
+REV="`git rev-parse --short HEAD`"
 MAINFILE="src/info/exascale/SimWeighted/main.java"
 MARKER='^\(\s*public static final String clirev = \"\)'
 # Check whether build is outside the repository
@@ -60,8 +64,10 @@ else
 	git diff-index --quiet HEAD --
 	if [ $? ]
 	then
-		REV="$REV+"
+		# Note: it might have sence to add current time for the modified revision
+		REV="$REV+"  #  (`date --rfc-3339=seconds -u`)
 	fi
+	# Note: the time of the revision, not of the current build
 	REV="$REV (`git log --pretty=format:'%ci' -1`)"  # Add time
 	# Substitute revision to the sources
 	# Note: return 1 if the substitution has not been made
