@@ -166,12 +166,9 @@ public class main {
 		//}
 		
 		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(CosineSimilarityMatix.properties.size(), 1);
-		Iterator propIt = CosineSimilarityMatix.properties.entrySet().iterator();
-		while(propIt.hasNext()) {
-			Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
+		for (Property prop: CosineSimilarityMatix.properties.values())
 			// The more seldom property, the higher it's weight
-			weightPerProperty.put(entry.getKey(), Math.sqrt(1./entry.getValue().occurances));
-		}
+			weightPerProperty.put(prop.name, Math.sqrt(1./prop.occurances));
 		CosineSimilarityMatix.properties = null;
 		if(tracingOn)
 			System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = " + weightPerProperty.get("<http://www.w3.org/2002/07/owl#sameAs>"));
@@ -185,22 +182,20 @@ public class main {
 		// to filter out such entites from the output because they can't be evalauted
 		// (essential only for the evaluation based on the ground-truth)
 		if(filteringOn) {
-			Iterator insIt = CosineSimilarityMatix.instanceListPropertiesTreeMap.entrySet().iterator();
 			final int mask = 1 << 31;
 			//System.out.println("mask= "+mask);
 
-			while(insIt.hasNext()) {
-				Map.Entry<String, InstanceProperties> entry = (Entry<String, InstanceProperties>) insIt.next();
-				if (entry.getValue().isTyped == false) {
-					//entry.getValue().id = -((int) entry.getValue().id);  // Note: causes issues if id is not int32_t
-					entry.getValue().id = entry.getValue().id | mask;
+			CosineSimilarityMatix.instancePropertiesMap.forEach((inst, instProps)-> {
+				if (instProps.isTyped == false) {
+					//instProps.id = -((int) instProps.id);  // Note: causes issues if id is not int32_t
+					instProps.id = instProps.id | mask;
 
 					if(tracingOn) {
-						System.out.println("value= "+entry.getKey());
-						System.out.println("value= "+entry.getValue().id);
+						System.out.println("value= " + inst);
+						System.out.println("value= " + instProps.id);
 					}
 				}
-			}
+			});
 		}
 	}
 
@@ -209,7 +204,7 @@ public class main {
 	}
 
 	public static Graph buildGraph() {
-		Set<String> instances = CosineSimilarityMatix.instanceListPropertiesTreeMap.keySet();
+		Set<String> instances = CosineSimilarityMatix.instancePropertiesMap.keySet();
 		final int n = instances.size();
 		Graph gr = new Graph(n);
 		InpLinks grInpLinks  = new InpLinks();
@@ -218,14 +213,14 @@ public class main {
 		// so even for the symmetric matrix all iterations should be done
 		int i = 0;
 		for (String inst1: instances) {
-			final long  sid = CosineSimilarityMatix.instanceListPropertiesTreeMap.get(inst1).id;  // Source node id
+			final long  sid = CosineSimilarityMatix.instancePropertiesMap.get(inst1).id;  // Source node id
 			int j = 0;
 			for (String inst2: instances) {
 				if(j > i) {
 					final float  weight = (float)CosineSimilarityMatix.similarity(inst1, inst2);
 					if(weight == 0)
 						continue;
-					final long did = CosineSimilarityMatix.instanceListPropertiesTreeMap.get(inst2).id;
+					final long did = CosineSimilarityMatix.instancePropertiesMap.get(inst2).id;
 					//System.out.print(" " + did + ":" + weight);
 					//if(weight <= 0 || Float.isNaN(weight))
 					//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
@@ -242,7 +237,7 @@ public class main {
 		grInpLinks = null;
 		CosineSimilarityMatix.weightsForEachProperty = null;
 		instances = null;
-		CosineSimilarityMatix.instanceListPropertiesTreeMap = null;
+		CosineSimilarityMatix.instancePropertiesMap = null;
 		System.err.println("Input graph formed");
 		return gr;
 	}
