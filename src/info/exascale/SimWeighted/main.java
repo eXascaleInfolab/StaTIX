@@ -166,9 +166,10 @@ public class main {
 		//}
 		
 		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(CosineSimilarityMatix.properties.size(), 1);
-		for (Property prop: CosineSimilarityMatix.properties.values())
+		for (Property prop: CosineSimilarityMatix.properties.values()) {
 			// The more seldom property, the higher it's weight
 			weightPerProperty.put(prop.name, Math.sqrt(1./prop.occurances));
+		}
 		CosineSimilarityMatix.properties = null;
 		if(tracingOn)
 			System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = " + weightPerProperty.get("<http://www.w3.org/2002/07/owl#sameAs>"));

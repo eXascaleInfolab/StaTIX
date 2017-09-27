@@ -101,10 +101,10 @@ public static void readDataSet1(String n3DataSet, String idMapFName) throws IOEx
 static class InstPropsStat {
 	// Note: TreeSet consumes too much
 	public ArrayList<String>  properties = null;
-	public int  typeCount = 0;
+	public int  ntypes = 0;
 }
 	
-public static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3DataSet) throws IOException {
+private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3DataSet) throws IOException {
 	//TreeMap key=instanceName and the value= List Of Properties of the key.
 	TreeMap<String, InstPropsStat>  instProps = new TreeMap<String, InstPropsStat>();
 	TreeSet<String>  allprops = new TreeSet<String>();  // All properties of the second dataset
@@ -114,15 +114,14 @@ public static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3Dat
 		if (line.isEmpty())
 			continue;
 		//lines.add(line);
-		//if (typeCount % 100 ==0)
-		//		System.out.println(typeCount);
+		//if (ntypes % 100 ==0)
+		//		System.out.println(ntypes);
 		String[] s = line.split(" ");
 		
 		//if (s.length<3) continue;
 		boolean isTyped = false;
-		if (s[1].contains(CosineSimilarityMatix.typeProperty)) {
+		if (s[1].contains(CosineSimilarityMatix.typeProperty))
 			isTyped = true;
-		}
 		
 		final String instance = s[0];
 		InstPropsStat propstat = instProps.get(instance);
@@ -144,7 +143,7 @@ public static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3Dat
 					pos = -pos - 1;
 			}
 			propstat.properties.add(pos, propname);
-		} else ++propstat.typeCount;
+		} else ++propstat.ntypes;
 	
 	}
 	bufferedReader.close();
@@ -158,41 +157,37 @@ private static int cutneg(int a)
 	return a >= 0 ? a : 0;
 }
 
+static class ValWrapper<Val> {
+	public Val  val;
+	
+	public ValWrapper(Val val) {
+		this.val = val;
+	}
+}
+
 public static HashMap<String, Double> readDataSet2(String n3DataSet) throws IOException {
 	// Instance (subject): InstPropsStat
-	TreeMap<String, InstPropsStat> mapInstanceProperties = loadInstanceProperties(n3DataSet);
+	TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet);
 	
 	// Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in GT [DBpedia]
-	HashMap<String, Integer> propertiesTypesNum = new HashMap<String, Integer>(properties.size(), 1);
-	int ntypesGT = 0;
-	Iterator mapIt = properties.entrySet().iterator();
-	final int linSearchLim = 9;  // Max number of items when linear search is faster that binary search
+	HashMap<String, Integer> propNTypes = new HashMap<String, Integer>(properties.size(), 1);
+	final ValWrapper<Integer>  typesnum = new ValWrapper<Integer>(0);
 	
-	while(mapIt.hasNext()) {
-		int value = 0;  // The number of types in the property
-		Map.Entry<String, Property> entry = (Entry<String, Property>) mapIt.next();
-		final String propname = entry.getKey();
-		// System.out.println(String.format(" ************* Property : %s **************", entry.getValue().key));
-		Iterator mapInstPropIt = mapInstanceProperties.entrySet().iterator();
-		
-		while(mapInstPropIt.hasNext()) {
-			Map.Entry<String, InstPropsStat> instPropsEntry = (Entry<String, InstPropsStat>) mapInstPropIt.next();
-			InstPropsStat propstat = instPropsEntry.getValue();
-			if (propstat == null || propstat.properties == null)
-				continue;
-			if(propstat.properties.size() <= linSearchLim ? propstat.properties.contains(propname)
-			: propstat.properties.get(cutneg(Collections.binarySearch(propstat.properties, propname))) == propname) {
-				value += propstat.typeCount;
-				//if (nt>0) System.out.println(String.format("%s : %d", instPropsEntry.getKey(), nt));
+	instPStats.forEach((inst, propstat) -> {
+		if (propstat.properties != null) {
+			int matched = 0;
+			for(String propname: propstat.properties) {
+				if(!properties.containsKey(propname))
+					continue;
+				propNTypes.put(propname, propNTypes.getOrDefault(propname, 0) + propstat.ntypes);
+				++matched;
 			}
+			typesnum.val += propstat.ntypes * matched;
 		}
-		//System.out.println("" +value) ;
-		propertiesTypesNum.put(propname, value);
-		ntypesGT += value;
-		//mapIt.remove();
-	}
-	
-	mapInstanceProperties.clear();
+	});
+	instPStats.clear();
+	// The number of type occurances in GT from the properties existing in the input dataset
+	final int ntypesGT = typesnum.val;
 	
 	//******************************************************************PropertyWeighCalculation********************************************************
 	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 1);
@@ -201,13 +196,13 @@ public static HashMap<String, Double> readDataSet2(String n3DataSet) throws IOEx
 	ArrayList<String> notFoundProps = new ArrayList<String>();
 
 	for (Property prop: properties.values()) {
-		final double  propTypesNum = propertiesTypesNum.get(prop.name);
-		if(propTypesNum != 0) {
+		final double  ntypesProp = propNTypes.get(prop.name);
+		if(ntypesProp != 0) {
 			foundProps++;
-			final double occurPropi= prop.occurances;
+			final double occurPropi = prop.occurances;
 			// Note: ntypesGT+1 to avoid 0, resulting values E (0, ~64-500), typically ~1 for almost full match
 			// Note: it would be beneficial to omit equivalent types (having the same members) before applying this formula
-			propertyWeight = (1./ntypesGT - Math.log(propTypesNum/ntypesGT));
+			propertyWeight = (1./ntypesGT - Math.log(ntypesProp/ntypesGT));
 				// The more seldom property, the more it is indicative
 				//* Math.sqrt(1./occurPropi);
 			weightPerProperty.put(prop.name, propertyWeight);
@@ -223,7 +218,7 @@ public static HashMap<String, Double> readDataSet2(String n3DataSet) throws IOEx
 			 + ", " + propWeights.get(propWeights.size()-1) + "], mean: " + wmed);
 	}
 	//// Find the median and normalize to the median
-	//Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesGT+1) -> 0  wmax < 64
+	//Collections.sort(propWeights);  // Note: even for ntypesProp/(ntypesGT+1) -> 0  wmax < 64
 	//final int pwsize = propWeights.size();
 	//final double wmed = pwsize >= 1 ? propWeights.get(pwsize / 2) : 1.;
 	//for (int i = 0; i < pwsize; ++i)
