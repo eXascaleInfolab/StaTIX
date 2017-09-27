@@ -199,8 +199,8 @@ public class main {
 		}
 	}
 
-	public static void readDataSet2(String n3DataSet) throws IOException {
-		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readDataSet2(n3DataSet);
+	public static void readGtData(String n3DataSet) throws IOException {
+		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readGtData(n3DataSet);
 	}
 
 	public static Graph buildGraph() {
@@ -289,7 +289,7 @@ public class main {
 	//This function first check if it is out put results from before and will delete them before running the app and then read the directory for input dataset
 	public static void LoadDatasets(String dataPath, String dataPath2, boolean filteringOn, String idMapFName) throws Exception {
 		readInputData(dataPath, filteringOn, idMapFName);
-		readDataSet2(dataPath2);
+		readGtData(dataPath2);
 		CosineSimilarityMatix.properties = null;
 	}
 }

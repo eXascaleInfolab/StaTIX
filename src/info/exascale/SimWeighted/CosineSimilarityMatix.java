@@ -21,17 +21,27 @@ static int totalOccurances = 0;  // Total number of occurrences of all propertie
 public CosineSimilarityMatix(String file1, String file2, String idMapFName) throws IOException
 {
 	readInputData(file1, idMapFName);
-	weightsForEachProperty = readDataSet2(file2);
+	weightsForEachProperty = readGtData(file2);
 }
 
 // Output id mapping if required (idMapFName != null)
 public double[][] CosineSimilarity (String file1, String file2, String idMapFName) throws IOException
 {
 	readInputData(file1, idMapFName);
-	weightsForEachProperty = readDataSet2(file2);
+	weightsForEachProperty = readGtData(file2);
 	
 	return SymmetricMatrixProgram();
 }
+
+//static class PropertyExt {
+//	public String  name;
+//	public Property  prop; 
+//	
+//	public PropertyExt(String name) {
+//		this.name = name;
+//		this.prop = new Property();
+//	}
+//}
 
 //function to read the first dataset
 public static void readInputData(String n3DataSet, String idMapFName) throws IOException {
@@ -166,12 +176,12 @@ static class ValWrapper<Val> {
 	}
 }
 
-public static HashMap<String, Double> readDataSet2(String n3DataSet) throws IOException {
+public static HashMap<String, Double> readGtData(String n3DataSet) throws IOException {
 	// Instance (subject): InstPropsStat
 	TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet);
 	
 	// Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in GT [DBpedia]
-	HashMap<String, Integer> propNTypes = new HashMap<String, Integer>(properties.size(), 1);
+	HashMap<String, Integer>  propNTypes = new HashMap<String, Integer>(properties.size(), 1);
 	final ValWrapper<Integer>  typesnum = new ValWrapper<Integer>(0);
 	
 	instPStats.forEach((inst, propstat) -> {
@@ -196,13 +206,16 @@ public static HashMap<String, Double> readDataSet2(String n3DataSet) throws IOEx
 	int foundProps = 0;
 	ArrayList<String> notFoundProps = new ArrayList<String>();
 
+	//System.err.println("readGtData(), propNTypes: " + (propNTypes != null ? propNTypes.size() : "null")
+	//	+ ", properties: " + (properties != null ? properties.size() : "null"));
 	for (Property prop: properties.values()) {
-		final double  ntypesProp = propNTypes.get(prop.name);
+		final double  ntypesProp = propNTypes.getOrDefault(prop.name, 0);
 		if(ntypesProp != 0) {
 			foundProps++;
 			final double occurPropi = prop.occurances;
 			// Note: ntypesGT+1 to avoid 0, resulting values E (0, ~64-500), typically ~1 for almost full match
 			// Note: it would be beneficial to omit equivalent types (having the same members) before applying this formula
+			//assert ntypesProp <= ntypesGT;
 			propertyWeight = (1./ntypesGT - Math.log(ntypesProp/ntypesGT));
 				// The more seldom property, the more it is indicative
 				//* Math.sqrt(1./occurPropi);
@@ -215,8 +228,11 @@ public static HashMap<String, Double> readDataSet2(String n3DataSet) throws IOEx
 			.sorted().collect(Collectors.toCollection(ArrayList::new));
 		wmed = propWeights.get(propWeights.size() / 2);
 		// Trace assigned property weights
-		System.out.println("readDataSet2(), " + propWeights.size() + " pweights [" + propWeights.get(0)
-			 + ", " + propWeights.get(propWeights.size()-1) + "], mean: " + wmed);
+		System.out.println("readGtData(), " + propWeights.size() + " pweights [" + propWeights.get(0)
+			 + ", " + propWeights.get(propWeights.size()-1) + "], mean: " + wmed + "; ntypesGT: " + ntypesGT);
+		weightPerProperty.replaceAll((name, weight) -> {
+			return Math.sqrt(Math.sqrt(1./properties.get(name).occurances) * weight);
+		});
 	}
 	//// Find the median and normalize to the median
 	//Collections.sort(propWeights);  // Note: even for ntypesProp/(ntypesGT+1) -> 0  wmax < 64
