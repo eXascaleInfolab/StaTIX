@@ -210,7 +210,8 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			final double occurPropi= entry.getValue().occurances;
 			// Note: ntypesDBP+1 to avoid 0, resulting values E (0, ~64)
 			propertyWeight = (1./ntypesDBP - Math.log(propTypesNum/ntypesDBP))
-				* Math.sqrt(occurPropi/totalOccurances);
+				// The more seldom property, the more it is indicative
+				* Math.sqrt(1./occurPropi);
 
 			totalWeight += propertyWeight;
 			weightPerProperty.put(propName, propertyWeight);
@@ -227,7 +228,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		propWeights.set(i, propWeights.get(i) / wmed);
 	// Set remained weights to 1, which is the weight of the normalized median
 	for (String prop: notFoundProps)
-		weightPerProperty.put(prop, Math.sqrt((double)properties.get(prop).occurances / totalOccurances) / wmed);
+		weightPerProperty.put(prop, Math.sqrt(1./properties.get(prop).occurances) / wmed);
 	
 	return weightPerProperty;
 }

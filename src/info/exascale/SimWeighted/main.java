@@ -169,6 +169,7 @@ public class main {
 		Iterator propIt = CosineSimilarityMatix.properties.entrySet().iterator();
 		while(propIt.hasNext()) {
 			Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
+			// The more seldom property, the higher it's weight
 			weightPerProperty.put(entry.getKey(), Math.sqrt(1./entry.getValue().occurances));
 		}
 		CosineSimilarityMatix.properties = null;
