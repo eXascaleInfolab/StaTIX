@@ -64,11 +64,12 @@ else
 	git diff-index --quiet HEAD --
 	if [ $? -ne 0 ]
 	then
-		# Note: it might have sence to add current time for the modified revision
-		REV="$REV+"  #  (`date --rfc-3339=seconds -u`)
+		# Use current time for the modified revision
+		REV="$REV+ (`date --rfc-3339=seconds`)"  #  -u
+	else
+		# Fetch the revision time from the git repository
+		REV="$REV (`git log --pretty=format:'%ci' -1`)"  # Add time
 	fi
-	# Note: the time of the revision, not of the current build
-	REV="$REV (`git log --pretty=format:'%ci' -1`)"  # Add time
 	# Substitute revision to the sources
 	# Note: return 1 if the substitution has not been made
 	sed -i "/${MARKER}/"',$'"{s/${MARKER}[^\"]*\"/\1$REV\"/;b}"';$q1' "$MAINFILE"
