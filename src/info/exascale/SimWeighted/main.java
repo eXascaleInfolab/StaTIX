@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.util.*;
-import java.util.Map.Entry;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -151,7 +150,7 @@ public class main {
 		
 	//In case that only input file is givven to the app (without Ground-TRuth dataset)all the property weights will be set = 1
 	public static void LoadDataset(String n3DataSet, boolean filteringOn, String idMapFName, String hints) throws IOException {
-		readDataSet1(n3DataSet, filteringOn, idMapFName);
+		readInputData(n3DataSet, filteringOn, idMapFName);
 		
 		//// Apply the hints for the property weights if any
 		//if(hints != null) {
@@ -177,8 +176,8 @@ public class main {
 	}
 	
 	//function to read the Input Dataset and put the values in map and instanceListProperties TreeMaps
-	public static void readDataSet1(String n3DataSet, boolean filteringOn, String idMapFName) throws IOException {
-		CosineSimilarityMatix.readDataSet1(n3DataSet, idMapFName);
+	public static void readInputData(String n3DataSet, boolean filteringOn, String idMapFName) throws IOException {
+		CosineSimilarityMatix.readInputData(n3DataSet, idMapFName);
 		// Set the higest bit in the entities id if the entity does not have any type properties
 		// to filter out such entites from the output because they can't be evalauted
 		// (essential only for the evaluation based on the ground-truth)
@@ -289,7 +288,7 @@ public class main {
 	
 	//This function first check if it is out put results from before and will delete them before running the app and then read the directory for input dataset
 	public static void LoadDatasets(String dataPath, String dataPath2, boolean filteringOn, String idMapFName) throws Exception {
-		readDataSet1(dataPath, filteringOn, idMapFName);
+		readInputData(dataPath, filteringOn, idMapFName);
 		readDataSet2(dataPath2);
 		CosineSimilarityMatix.properties = null;
 	}

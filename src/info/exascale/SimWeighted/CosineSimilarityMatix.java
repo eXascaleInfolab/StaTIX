@@ -6,44 +6,37 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.Map.Entry;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
 public class CosineSimilarityMatix {
 public static final String typeProperty = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
-public static TreeMap<String, Property> properties = new TreeMap<String, Property>();  // Note: used only on datasets loading
-public static TreeMap<String, InstanceProperties> instancePropertiesMap = new TreeMap<String, InstanceProperties>();
+public static HashMap<String, Property> properties = null;  // Note: used only on datasets loading
+public static HashMap<String, InstanceProperties> instancePropertiesMap = null;
 public static HashMap<String, Double> weightsForEachProperty = null;  // Used in similarity evaluation
 static int totalOccurances = 0;  // Total number of occurrences of all properties in the input datasets (the number of triples)
 
 // Output id mapping if required (idMapFName != null)
 public CosineSimilarityMatix(String file1, String file2, String idMapFName) throws IOException
 {
-	readDataSet1(file1, idMapFName);
+	readInputData(file1, idMapFName);
 	weightsForEachProperty = readDataSet2(file2);
 }
 
 // Output id mapping if required (idMapFName != null)
 public double[][] CosineSimilarity (String file1, String file2, String idMapFName) throws IOException
 {
-	readDataSet1(file1, idMapFName);
+	readInputData(file1, idMapFName);
 	weightsForEachProperty = readDataSet2(file2);
 	
 	return SymmetricMatrixProgram();
 }
 
 //function to read the first dataset
-public static void readDataSet1(String n3DataSet, String idMapFName) throws IOException {
+public static void readInputData(String n3DataSet, String idMapFName) throws IOException {
+	TreeMap<String, InstanceProperties> instProps = new TreeMap<String, InstanceProperties>();
+	TreeMap<String, Property> props = new TreeMap<String, Property>();
     BufferedReader bufferedReader = new BufferedReader(new FileReader(n3DataSet));
     BufferedWriter  idmapf = null;
     
@@ -58,15 +51,15 @@ public static void readDataSet1(String n3DataSet, String idMapFName) throws IOEx
 		String[] s = line.split(" ");
 		//if (s.length<3) continue;
 		final String instancemapKey = s[0];
-		final int id = instancePropertiesMap.size();
+		final int id = instProps.size();
 		final String property = s[1];
 		final boolean isTyped = property.contains(typeProperty);
-		InstanceProperties instanceProperties = instancePropertiesMap.get(instancemapKey);
+		InstanceProperties instanceProperties = instProps.get(instancemapKey);
 
 		if (instanceProperties == null) {
 			instanceProperties = new InstanceProperties(id);
 			// Note: to have the isTyped flag the even empty properties should be added to the map
-			instancePropertiesMap.put(instancemapKey, instanceProperties);
+			instProps.put(instancemapKey, instanceProperties);
 			// Form id to instance name mapping
 			if (idmapf != null)
 				idmapf.write(id + "\t" + instancemapKey + "\n");
@@ -80,23 +73,31 @@ public static void readDataSet1(String n3DataSet, String idMapFName) throws IOEx
 		++totalOccurances;
 		
 		//********************insert to the map Treemap
-		//check if the propertyname was in out TreeMap before or not
-		Property entryProperty = properties.get(property);
+		//check if the propertyname was in the map before or not
+		Property entryProperty = props.get(property);
 		if (entryProperty == null) {
 			entryProperty = new Property(property);
-			properties.put(entryProperty.name, entryProperty);
+			props.put(entryProperty.name, entryProperty);
 		} else entryProperty.occurances++ ;
     }
     bufferedReader.close();
     if (idmapf != null)
 		idmapf.close();
-
+		
+	instancePropertiesMap = new HashMap<String, InstanceProperties>(instProps.size(), 1);
+	instancePropertiesMap.putAll(instProps);
+	instProps.clear();
+	
+	properties = new HashMap<String, Property>(props.size(), 1);
+	properties.putAll(props);
+	props.clear();
 //	System.out.println("List Properties for the instance <http://dbpedia.org/resource/BMW_Museum>=  "+instancePropertiesMap.get("<http://dbpedia.org/resource/BMW_Museum>").propertySet);
-//	System.out.println("The TreeMap Including properties and number of accurances in this case for <http://www.w3.org/2002/07/owl#sameAs>= "+map.get("<http://www.w3.org/2002/07/owl#sameAs>").occurances);
+//	System.out.println("The map with properties and number of accurances in this case for <http://www.w3.org/2002/07/owl#sameAs>= "+map.get("<http://www.w3.org/2002/07/owl#sameAs>").occurances);
 //	System.out.println(properties.get("<http://dbpedia.org/ontology/abstract>").propertyName);
 //	System.out.println(properties.size());
-	
 }
+
+
 
 static class InstPropsStat {
 	// Note: TreeSet consumes too much
@@ -105,7 +106,7 @@ static class InstPropsStat {
 }
 	
 private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3DataSet) throws IOException {
-	//TreeMap key=instanceName and the value= List Of Properties of the key.
+	// instanceName, i.e. subject: InstPropsStat
 	TreeMap<String, InstPropsStat>  instProps = new TreeMap<String, InstPropsStat>();
 	TreeSet<String>  allprops = new TreeSet<String>();  // All properties of the second dataset
 	BufferedReader bufferedReader = new BufferedReader(new FileReader(n3DataSet));
