@@ -162,7 +162,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	//Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in DBpedia***********************************************
 	
 	HashMap<String, Integer> propertiesTypesNum = new HashMap<String, Integer>(properties.size(), 1);
-	int ntypesDBP = 0;
+	int ntypesGT = 0;
 	Iterator mapIt = properties.entrySet().iterator();
 	final int linSearchLim = 9;  // Max number of items when linear search is faster that binary search
 	
@@ -186,7 +186,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		}
 		//System.out.println("" +value) ;
 		propertiesTypesNum.put(propname, value);
-		ntypesDBP += value;
+		ntypesGT += value;
 		//mapIt.remove();
 	}
 	
@@ -194,12 +194,10 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	
 	//******************************************************************PropertyWeighCalculation********************************************************
 	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 1);
-	double propertyWeight = 0, totalWeight = 0;
+	double propertyWeight = 0;
 	int foundProps = 0;
 	Iterator propIt = properties.entrySet().iterator();
 	ArrayList<String> notFoundProps = new ArrayList<String>();
-	// Usually at least 10% of props belong to the typed instances in the labeled collection
-	ArrayList<Double> propWeights = new ArrayList<Double>(properties.size() / 10);
 
 	while(propIt.hasNext()) {
 		Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
@@ -208,27 +206,25 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		if(propTypesNum != 0) {
 			foundProps++;
 			final double occurPropi= entry.getValue().occurances;
-			// Note: ntypesDBP+1 to avoid 0, resulting values E (0, ~64)
-			propertyWeight = (1./ntypesDBP - Math.log(propTypesNum/ntypesDBP))
+			// Note: ntypesGT+1 to avoid 0, resulting values E (0, ~64-500), typically ~1 for almost full match
+			propertyWeight = (1./ntypesGT - Math.log(propTypesNum/ntypesGT));
 				// The more seldom property, the more it is indicative
-				* Math.sqrt(1./occurPropi);
-
-			totalWeight += propertyWeight;
+				//* Math.sqrt(1./occurPropi);
 			weightPerProperty.put(propName, propertyWeight);
-			
-			propWeights.add(propertyWeight);
 		} else notFoundProps.add(propName);
 	}
-	propWeights.trimToSize();
-	// Find the median and normalize to the median
-	Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesDBP+1) -> 0  wmax < 64
-	final int pwsize = propWeights.size();
-	final double wmed = pwsize >= 1 ? propWeights.get(pwsize / 2) : 1.;
-	for (int i = 0; i < pwsize; ++i)
-		propWeights.set(i, propWeights.get(i) / wmed);
-	// Set remained weights to 1, which is the weight of the normalized median
+	//ArrayList<Double> propWeights = new ArrayList<Double>(weightPerProperty.values.stream()
+	//	.sorted(comparing(Property::occurances).reversed()).mapToDouble(Property::occurances).collect(toList()));
+	//// Find the median and normalize to the median
+	//Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesGT+1) -> 0  wmax < 64
+	//final int pwsize = propWeights.size();
+	//final double wmed = pwsize >= 1 ? propWeights.get(pwsize / 2) : 1.;
+	//for (int i = 0; i < pwsize; ++i)
+	//	propWeights.set(i, propWeights.get(i) / wmed);
+	
+	// Set remained weights in a usual way, but normalizing to max
 	for (String prop: notFoundProps)
-		weightPerProperty.put(prop, Math.sqrt(1./properties.get(prop).occurances) / wmed);
+		weightPerProperty.put(prop, Math.sqrt(1./properties.get(prop).occurances));
 	
 	return weightPerProperty;
 }
