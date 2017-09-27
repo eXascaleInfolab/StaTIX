@@ -209,7 +209,7 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 			foundProps++;
 			final double occurPropi= entry.getValue().occurances;
 			// Note: ntypesDBP+1 to avoid 0, resulting values E (0, ~64)
-			propertyWeight = (1./ntypesDBP - Math.log(propTypesNum/(ntypesDBP)))
+			propertyWeight = (1./ntypesDBP - Math.log(propTypesNum/ntypesDBP))
 				* Math.sqrt(occurPropi/totalOccurances);
 
 			totalWeight += propertyWeight;
@@ -219,20 +219,15 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 		} else notFoundProps.add(propName);
 	}
 	propWeights.trimToSize();
-	if(!propWeights.isEmpty()) {
-		// Find the median and normalize to the median, which is the estimated weight for the remained properties
-		// The normalization is required, because the property weights are used in the cosine sim matrix,
-		// where they are squared, which  behaves differently for >1 and <1, so the median normalization
-		// is important
-		Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesDBP+1) -> 0  wmax < 64
-		final int pwsize = propWeights.size();
-		final double wmed = propWeights.get(pwsize / 2);
-		for (int i = 0; i < pwsize; ++i)
-			propWeights.set(i, propWeights.get(i) / wmed);
-	}
+	// Find the median and normalize to the median
+	Collections.sort(propWeights);  // Note: even for propTypesNum/(ntypesDBP+1) -> 0  wmax < 64
+	final int pwsize = propWeights.size();
+	final double wmed = pwsize >= 1 ? propWeights.get(pwsize / 2) : 1.;
+	for (int i = 0; i < pwsize; ++i)
+		propWeights.set(i, propWeights.get(i) / wmed);
 	// Set remained weights to 1, which is the weight of the normalized median
 	for (String prop: notFoundProps)
-		weightPerProperty.put(prop, 1.);
+		weightPerProperty.put(prop, Math.sqrt((double)properties.get(prop).occurances / totalOccurances) / wmed);
 	
 	return weightPerProperty;
 }

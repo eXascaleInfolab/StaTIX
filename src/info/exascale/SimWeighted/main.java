@@ -16,6 +16,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionGroup;
 
 import info.exascale.SimWeighted.NativeUtils;
 import info.exascale.daoc.*;
@@ -32,16 +34,23 @@ public class main {
 	
 	public static void main(String[] args) throws Exception {
 		CommandLineParser parser = new DefaultParser();
+		// Mutually exclusive group of the supervised options / input format
+		final OptionGroup optspv = new OptionGroup();
+		// Option(String opt, String longOpt, boolean hasArg, String description)
+		// ground-truth or annotated, labeled
+		optspv.addOption(new Option("g", "ground-truth", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties)"));
+		optspv.addOption(new Option("b", "brief-hints", true, "Brief hits given interactively ('-' value) or in the specified file having the .ipl format for each line: <indicativity> <property>.\nIndicativity E [0, 1]; 0 - the property has no any impact on the entity type, 1 - the property fully specifies the entity type, (0, 1) - the property has some impact on the entity type"));
+		
 		Options options = new Options();
 		options.addOption("h", "help", false, "Show usage");
 		// Workflow: analyze input dataset, ask to rate potentially indicative properties (that might have huge impact)
 		//options.addOption("p", "supervised", true, "Supervision hint data in the format: <indicativity>\t <property>, where indicativity E [0, 1], '#' line comments are allowed.");
-		options.addOption("g", "ground-truth", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties). NOTE: deprecated, use 'supervised' option.");
+		options.addOptionGroup(optspv);
 		options.addOption("o", "output", true, "Output file, default: <inpfile>.cnl");
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id>	<subject_name>), default: disabled");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
-		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets.");
+		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		options.addOption("v", "version", false, "Show version");
 		
@@ -87,7 +96,7 @@ public class main {
 			String idMapFName = null;
 			if(cmd.hasOption("n"))
 				idMapFName = cmd.getOptionValue("n");
-
+				
 			if(cmd.hasOption("g")) {
 				String gtDataset = cmd.getOptionValue("g");
 				//System.out.println("Ground-truth file= "+gtDataset);
@@ -95,7 +104,8 @@ public class main {
 			}
 			else {
 				//System.out.println("Input file= "+args[0]);
-				LoadDataset(files[0], filteringOn, idMapFName);
+				String hints = cmd.hasOption("b") ? cmd.getOptionValue("b") : null;
+				LoadDataset(files[0], filteringOn, idMapFName, hints);
 			}
 
 			// Set output file
@@ -140,20 +150,26 @@ public class main {
 	}
 		
 	//In case that only input file is givven to the app (without Ground-TRuth dataset)all the property weights will be set = 1
-	public static void LoadDataset(String N3DataSet, boolean filteringOn, String idMapFName) throws IOException {
-		readDataSet1(N3DataSet, filteringOn, idMapFName);
+	public static void LoadDataset(String n3DataSet, boolean filteringOn, String idMapFName, String hints) throws IOException {
+		readDataSet1(n3DataSet, filteringOn, idMapFName);
+		
+		//// Apply the hints for the property weights if any
+		//if(hints != null) {
+			//ArrayList<Property> props(CosineSimilarityMatix.properties.values());
+			//// Sort properties by the decreasing occurrances
+			//props.sort((Property p1, Property p2) -> p2.occurances - p1.occurances);
+			//if(hints == "-") {
+				//// Interactive mode
+			//} else {
+				//// Read hints from the file
+			//}
+		//}
 		
 		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(CosineSimilarityMatix.properties.size(), 1);
 		Iterator propIt = CosineSimilarityMatix.properties.entrySet().iterator();
 		while(propIt.hasNext()) {
 			Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
-
-			try {
-				weightPerProperty.put(entry.getKey(),(double)1);
-			}
-			catch (Exception exeption) {
-				throw exeption;
-			}
+			weightPerProperty.put(entry.getKey(), Math.sqrt(1./entry.getValue().occurances));
 		}
 		CosineSimilarityMatix.properties = null;
 		if(tracingOn)
@@ -162,10 +178,11 @@ public class main {
 	}
 	
 	//function to read the Input Dataset and put the values in map and instanceListProperties TreeMaps
-	public static void readDataSet1(String N3DataSet, boolean filteringOn, String idMapFName) throws IOException {
-		CosineSimilarityMatix.readDataSet1(N3DataSet, idMapFName);
-		
-		// setBitwise for id
+	public static void readDataSet1(String n3DataSet, boolean filteringOn, String idMapFName) throws IOException {
+		CosineSimilarityMatix.readDataSet1(n3DataSet, idMapFName);
+		// Set the higest bit in the entities id if the entity does not have any type properties
+		// to filter out such entites from the output because they can't be evalauted
+		// (essential only for the evaluation based on the ground-truth)
 		if(filteringOn) {
 			Iterator insIt = CosineSimilarityMatix.instanceListPropertiesTreeMap.entrySet().iterator();
 			final int mask = 1 << 31;
@@ -186,8 +203,8 @@ public class main {
 		}
 	}
 
-	public static void readDataSet2(String N3DataSet) throws IOException {
-		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readDataSet2(N3DataSet);
+	public static void readDataSet2(String n3DataSet) throws IOException {
+		CosineSimilarityMatix.weightsForEachProperty = CosineSimilarityMatix.readDataSet2(n3DataSet);
 	}
 
 	public static Graph buildGraph() {
