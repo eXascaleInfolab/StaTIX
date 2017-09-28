@@ -252,11 +252,16 @@ public class main {
 			//? 0x45  // SIMPLE | ALLCLS
 			: 0x41);  // SIMPLE | ROOT
 		outpopts.setClsfmt(outpflag);
-		// Set SignifclsOptions
-		SignifclsOptions sgnopts = new SignifclsOptions();
-		sgnopts.setDensdrop(0.9f);
-		sgnopts.setWrstep(0.95f);
-		sgnopts.setSzmin(2);
+		
+		// Set SignifclsOptions if required
+		if(multiLev) {
+			SignifclsExtoptions sgnopts = new SignifclsExtoptions();
+			sgnopts.setDensdrop(0.9f);
+			sgnopts.setWrstep(0.95f);
+			sgnopts.setSzmin(0);  // 2
+			outpopts.setSignifcls(sgnopts);
+		}
+		
 		// Note: clsrstep, levmarg, margmin actual only for the CUSTLEVS, but strored in the same space as parameters for the multilev output in the latest versions of the DAOC
 		//outpopts.setClsrstep(0.618f);  // 0.368f (e^-1); 0.618f (golden ratio)
 		//outpopts.setLevmarg(daoc.toLevMargKind((short)0xff));  // LEVSTEPNUM, level steps relative to clrstep
