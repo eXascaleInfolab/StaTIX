@@ -184,20 +184,27 @@ private static int cutneg(int a)
 	return a >= 0 ? a : 0;
 }
 
-//static class ValWrapper<Val> {
-//	public Val  val;
-//	
-//	public ValWrapper(Val val) {
-//		this.val = val;
-//	}
-//}
+static class ValWrapper<Val> {
+	public Val  val;
+	
+	public ValWrapper(Val val) {
+		this.val = val;
+	}
+}
+
+static class TypeStat {
+	// Note: initialized to 0 by default
+	public int  ocrprops;  // The number of properties in all instances having this type
+	public int  numinsts;  // The number of instances (subects) having this type
+}
 
 public static HashMap<String, Double> readGtData(String n3DataSet) throws IOException {
 	// Instance (subject): InstPropsStat
 	TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet);
 	// The estimated number of types is square root of the number of properties
 	// Note: this hasmap will be resized is resizable, so use load factor < 1
-	final HashMap<String, Integer>  typesPropsOcr = new HashMap<String, Integer>((int)Math.sqrt(properties.size()), 0.85f);
+	final HashMap<String, TypeStat>  typesStats = new HashMap<String, TypeStat>((int)Math.sqrt(properties.size()), 0.85f);
+	final ValWrapper<Integer> instsNum = new ValWrapper<Integer>(0);
 
 	// Fill for each property in the input dataset accumulate types with occurrences and , 
 	instPStats.forEach((inst, propstat) -> {
@@ -226,12 +233,20 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 				}
 				++matched;
 			}
+			// Skip instances that do not have any relation to the  properties of the input dataset
 			if(matched == 0)
 				return;
 			// Update properties occurrences in types
-			final int  propocr = matched;
-			for(String tname: propstat.types)
-				typesPropsOcr.put(tname, typesPropsOcr.getOrDefault(tname, 0) + propocr);
+			for(String tname: propstat.types) {
+				TypeStat tstat = typesStats.get(tname);
+				if(tstat == null) {
+					tstat = new TypeStat();
+					typesStats.put(tname, tstat);
+				}
+				tstat.ocrprops += matched;
+				++tstat.numinsts;
+			}
+			++instsNum.val;
 		}
 	});
 	instPStats = null;
@@ -253,17 +268,21 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 		// Evaluate property weight
 		// Note: the types size is not important here, it will be captured by the similarity matrix,
 		// each type impcats equally on the accumulated significance / indicativity / weight of the property
+		final double  mulInsts = 1./instsNum.val;  // Instances multiplier
 		double weight = 0;
-		for(TypePropOcr tpo: prop.types)
-			weight += (double)tpo.propocr / typesPropsOcr.get(tpo.type);
+		for(TypePropOcr tpo: prop.types) {
+			TypeStat tstat = typesStats.get(tpo.type);
+			weight += Math.sqrt((double)tpo.propocr / tstat.ocrprops)  // Prop frequency in the type
+				/ (1. - Math.log(tstat.numinsts*mulInsts));  // Inferse log IDF  (size of the type in instances)
+		}
 		weight /= prop.types.size();
 		assert !Double.isNaN(weight): "Property weight should be valid";
 		propertiesWeights.put(propname, weight);
 		prop.types = null;
 	});
 	notFoundProps.trimToSize();
-	final int  ntypesGT = typesPropsOcr.size();
-	typesPropsOcr.clear();
+	final int  ntypesGT = typesStats.size();
+	typesStats.clear();
 	
 	//System.out.print("propertiesWeights: ");
 	//for(double w: propertiesWeights.values())
