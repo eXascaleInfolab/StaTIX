@@ -13,40 +13,40 @@ import java.util.stream.Collectors;
 public class CosineSimilarityMatix {
 public static final String typeProperty = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 public static HashMap<String, Property> properties = null;  // Note: used only on datasets loading
-public static HashMap<String, InstanceProperties> instancePropertiesMap = null;
-public static HashMap<String, Double> weightsForEachProperty = null;  // Used in similarity evaluation
+public static HashMap<String, InstanceProperties> instsProps = null;
+public static HashMap<String, Double> propsWeights = null;  // Used in similarity evaluation
 static int totalOccurances = 0;  // Total number of occurrences of all properties in the input datasets (the number of triples)
 
 // Output id mapping if required (idMapFName != null)
 public CosineSimilarityMatix(String file1, String file2, String idMapFName) throws IOException
 {
 	readInputData(file1, idMapFName);
-	weightsForEachProperty = readGtData(file2);
+	propsWeights = readGtData(file2);
 }
 
 // Output id mapping if required (idMapFName != null)
 public double[][] CosineSimilarity (String file1, String file2, String idMapFName) throws IOException
 {
 	readInputData(file1, idMapFName);
-	weightsForEachProperty = readGtData(file2);
+	propsWeights = readGtData(file2);
 	
 	return SymmetricMatrixProgram();
 }
 
-//static class PropertyExt {
-//	public String  name;
-//	public Property  prop; 
-//	
-//	public PropertyExt(String name) {
-//		this.name = name;
-//		this.prop = new Property();
-//	}
-//}
+static class PropertyExt {
+	public String  name;
+	public Property  prop; 
+	
+	public PropertyExt(String name) {
+		this.name = name;
+		this.prop = new Property(name);
+	}
+}
 
 //function to read the first dataset
 public static void readInputData(String n3DataSet, String idMapFName) throws IOException {
 	TreeMap<String, InstanceProperties> instProps = new TreeMap<String, InstanceProperties>();
-	TreeMap<String, Property> props = new TreeMap<String, Property>();
+	TreeMap<String, PropertyExt> props = new TreeMap<String, PropertyExt>();
     BufferedReader bufferedReader = new BufferedReader(new FileReader(n3DataSet));
     BufferedWriter  idmapf = null;
     
@@ -84,24 +84,26 @@ public static void readInputData(String n3DataSet, String idMapFName) throws IOE
 		
 		//********************insert to the map Treemap
 		//check if the propertyname was in the map before or not
-		Property entryProperty = props.get(property);
-		if (entryProperty == null) {
-			entryProperty = new Property(property);
-			props.put(entryProperty.name, entryProperty);
-		} else entryProperty.occurances++ ;
+		PropertyExt propext = props.get(property);
+		if (propext == null) {
+			propext = new PropertyExt(property);
+			props.put(propext.name, propext);
+		} else propext.prop.occurances++ ;
     }
     bufferedReader.close();
     if (idmapf != null)
 		idmapf.close();
 		
-	instancePropertiesMap = new HashMap<String, InstanceProperties>(instProps.size(), 1);
-	instancePropertiesMap.putAll(instProps);
+	instsProps = new HashMap<String, InstanceProperties>(instProps.size(), 1);
+	instsProps.putAll(instProps);
 	instProps.clear();
 	
 	properties = new HashMap<String, Property>(props.size(), 1);
-	properties.putAll(props);
+	props.forEach((name, propx) -> {
+		properties.put(name, propx.prop);
+	});
 	props.clear();
-//	System.out.println("List Properties for the instance <http://dbpedia.org/resource/BMW_Museum>=  "+instancePropertiesMap.get("<http://dbpedia.org/resource/BMW_Museum>").propertySet);
+//	System.out.println("List Properties for the instance <http://dbpedia.org/resource/BMW_Museum>=  "+instsProps.get("<http://dbpedia.org/resource/BMW_Museum>").propertySet);
 //	System.out.println("The map with properties and number of accurances in this case for <http://www.w3.org/2002/07/owl#sameAs>= "+map.get("<http://www.w3.org/2002/07/owl#sameAs>").occurances);
 //	System.out.println(properties.get("<http://dbpedia.org/ontology/abstract>").propertyName);
 //	System.out.println(properties.size());
@@ -112,15 +114,36 @@ public static void readInputData(String n3DataSet, String idMapFName) throws IOE
 static class InstPropsStat {
 	// Note: TreeSet consumes too much
 	public ArrayList<String>  properties = null;
-	public int  ntypes = 0;
+	public ArrayList<String>  types = null;
+	//public int  ntypes = 0;
+}
+
+@FunctionalInterface
+public interface TriConsumer<T1, T2, T3> {
+	void accept(T1 t1, T2 t2, T3 t3);
 }
 	
 private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3DataSet) throws IOException {
 	// instanceName, i.e. subject: InstPropsStat
-	TreeMap<String, InstPropsStat>  instProps = new TreeMap<String, InstPropsStat>();
+	TreeMap<String, InstPropsStat>  instsSProps = new TreeMap<String, InstPropsStat>();
 	TreeSet<String>  allprops = new TreeSet<String>();  // All properties of the second dataset
-	BufferedReader bufferedReader = new BufferedReader(new FileReader(n3DataSet));
-	String line = null;
+	TreeSet<String>  alltypes = new TreeSet<String>();  // All types of the second dataset
+	
+	// Accumulate names
+	TriConsumer<String, TreeSet<String>, ArrayList<String>> accnames = (name, allnames, names) -> {
+		if(!allnames.add(name))
+			name = allnames.tailSet(name).first();
+		int pos = 0;
+		if(!names.isEmpty()) {
+			pos = Collections.binarySearch(names, name);
+			if(pos < 0)
+				pos = -pos - 1;
+		}
+		names.add(pos, name);
+	};
+	
+	BufferedReader  bufferedReader = new BufferedReader(new FileReader(n3DataSet));
+	String  line = null;
 	while ((line = bufferedReader.readLine()) != null) {
 		if (line.isEmpty())
 			continue;
@@ -130,36 +153,31 @@ private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3Da
 		String[] s = line.split(" ");
 		
 		//if (s.length<3) continue;
-		boolean isTyped = false;
+		boolean isType = false;  // Type property
 		if (s[1].contains(CosineSimilarityMatix.typeProperty))
-			isTyped = true;
+			isType = true;
 		
 		final String instance = s[0];
-		InstPropsStat propstat = instProps.get(instance);
+		InstPropsStat propstat = instsSProps.get(instance);
 		if (propstat == null) {
 			propstat = new InstPropsStat();
-			instProps.put(instance, propstat);
+			instsSProps.put(instance, propstat);
 		}
-		if (!isTyped) {
-			if (propstat.properties == null)
+		if(!isType) {
+			if(propstat.properties == null)
 				propstat.properties = new ArrayList<String>();
 			// Update all props and get the property from the existing object
-			String propname = s[1];
-			if(!allprops.add(propname))
-				propname = allprops.tailSet(propname).first();
-			int pos = 0;
-			if(!propstat.properties.isEmpty()) {
-				pos = Collections.binarySearch(propstat.properties, propname);
-				if(pos < 0)
-					pos = -pos - 1;
-			}
-			propstat.properties.add(pos, propname);
-		} else ++propstat.ntypes;
+			accnames.accept(s[1], allprops, propstat.properties);
+		} else {
+			if(propstat.types == null)
+				propstat.types = new ArrayList<String>();
+			accnames.accept(s[2], alltypes, propstat.types);
+		}
 	
 	}
 	bufferedReader.close();
 	allprops = null;
-	return instProps;
+	return instsSProps;
 }
 
 // Cut negative numbers to zero
@@ -190,10 +208,10 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 			for(String propname: propstat.properties) {
 				if(!properties.containsKey(propname))
 					continue;
-				propNTypes.put(propname, propNTypes.getOrDefault(propname, 0) + propstat.ntypes);
+				propNTypes.put(propname, propNTypes.getOrDefault(propname, 0) + propstat.types.size());
 				++matched;
 			}
-			typesnum.val += propstat.ntypes * matched;
+			typesnum.val += propstat.types.size() * matched;
 		}
 	});
 	instPStats.clear();
@@ -202,26 +220,20 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 	
 	//******************************************************************PropertyWeighCalculation********************************************************
 	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 1);
-	double propertyWeight = 0;
-	int foundProps = 0;
 	ArrayList<String> notFoundProps = new ArrayList<String>();
 
 	//System.err.println("readGtData(), propNTypes: " + (propNTypes != null ? propNTypes.size() : "null")
 	//	+ ", properties: " + (properties != null ? properties.size() : "null"));
-	for (Property prop: properties.values()) {
-		final double  ntypesProp = propNTypes.getOrDefault(prop.name, 0);
+	properties.forEach((propname, prop) -> {
+		final double  ntypesProp = propNTypes.getOrDefault(propname, 0);
 		if(ntypesProp != 0) {
-			foundProps++;
-			final double occurPropi = prop.occurances;
 			// Note: ntypesGT+1 to avoid 0, resulting values E (0, ~64-500), typically ~1 for almost full match
 			// Note: it would be beneficial to omit equivalent types (having the same members) before applying this formula
 			//assert ntypesProp <= ntypesGT;
-			propertyWeight = (1./ntypesGT - Math.log(ntypesProp/ntypesGT));
-				// The more seldom property, the more it is indicative
-				//* Math.sqrt(1./occurPropi);
-			weightPerProperty.put(prop.name, propertyWeight);
-		} else notFoundProps.add(prop.name);
-	}
+			double propertyWeight = 1./ntypesGT - Math.log(ntypesProp/ntypesGT);
+			weightPerProperty.put(propname, propertyWeight);
+		} else notFoundProps.add(propname);
+	});
 	double wmed = 1.;
 	if(!weightPerProperty.isEmpty()) {
 		ArrayList<Double> propWeights = weightPerProperty.values().stream()
@@ -256,8 +268,8 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 		double inst2TotWeight = 0;
 		double powerCommon =0;
 
-		TreeSet<String> instance1Properties = instancePropertiesMap.get(instance1).propertySet;
-		TreeSet<String> instance2Properties = instancePropertiesMap.get(instance2).propertySet;
+		TreeSet<String> instance1Properties = instsProps.get(instance1).propertySet;
+		TreeSet<String> instance2Properties = instsProps.get(instance2).propertySet;
 		if (instance1Properties.size() > instance2Properties.size()) {
 			TreeSet<String> tempTreeSet = instance1Properties;
 			instance1Properties = instance2Properties;
@@ -272,7 +284,7 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 		}
 
 		for(String prop1: instance1Properties) {
-			Double weight = weightsForEachProperty.get(prop1);
+			Double weight = propsWeights.get(prop1);
 			if(weight == null)
 				continue;
 			weight *= weight;
@@ -283,7 +295,7 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 		inst1TotWeight = Math.sqrt(inst1TotWeight);
 
 		for(String prop2: instance2Properties) {
-			Double weight = weightsForEachProperty.get(prop2);
+			Double weight = propsWeights.get(prop2);
 			if(weight == null)
 				continue;
 			weight *= weight;
@@ -306,7 +318,7 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 
 public static double[][] SymmetricMatrixProgram()
 {
-	Set<String> instances = instancePropertiesMap.keySet();
+	Set<String> instances = instsProps.keySet();
 	final int n = instances.size();
 	double matrix[][] = new double[n][n];
  
