@@ -96,20 +96,17 @@ public static void readInputData(String n3DataSet, String idMapFName) throws IOE
 		
 	instsProps = new HashMap<String, InstanceProperties>(instProps.size(), 1);
 	instsProps.putAll(instProps);
-	instProps.clear();
+	instProps = null;
 	
 	properties = new HashMap<String, Property>(props.size(), 1);
 	props.forEach((name, propx) -> {
 		properties.put(name, propx.prop);
 	});
-	props.clear();
 //	System.out.println("List Properties for the instance <http://dbpedia.org/resource/BMW_Museum>=  "+instsProps.get("<http://dbpedia.org/resource/BMW_Museum>").propertySet);
 //	System.out.println("The map with properties and number of accurances in this case for <http://www.w3.org/2002/07/owl#sameAs>= "+map.get("<http://www.w3.org/2002/07/owl#sameAs>").occurances);
 //	System.out.println(properties.get("<http://dbpedia.org/ontology/abstract>").propertyName);
 //	System.out.println(properties.size());
 }
-
-
 
 static class InstPropsStat {
 	// Note: TreeSet consumes too much
@@ -136,8 +133,10 @@ private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3Da
 		int pos = 0;
 		if(!names.isEmpty()) {
 			pos = Collections.binarySearch(names, name);
-			if(pos < 0)
-				pos = -pos - 1;
+			if(pos >= 0)  // The item is present already
+				return;
+			// New item
+			pos = -pos - 1;
 		}
 		names.add(pos, name);
 	};
@@ -176,7 +175,6 @@ private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3Da
 	
 	}
 	bufferedReader.close();
-	allprops = null;
 	return instsSProps;
 }
 
@@ -186,66 +184,107 @@ private static int cutneg(int a)
 	return a >= 0 ? a : 0;
 }
 
-static class ValWrapper<Val> {
-	public Val  val;
-	
-	public ValWrapper(Val val) {
-		this.val = val;
-	}
-}
+//static class ValWrapper<Val> {
+//	public Val  val;
+//	
+//	public ValWrapper(Val val) {
+//		this.val = val;
+//	}
+//}
 
 public static HashMap<String, Double> readGtData(String n3DataSet) throws IOException {
 	// Instance (subject): InstPropsStat
 	TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet);
-	
-	// Third HashMap including the Property name from the First MapTree(properties) and totalNumber of types that it in GT [DBpedia]
-	HashMap<String, Integer>  propNTypes = new HashMap<String, Integer>(properties.size(), 1);
-	final ValWrapper<Integer>  typesnum = new ValWrapper<Integer>(0);
-	
+	// The estimated number of types is square root of the number of properties
+	// Note: this hasmap will be resized is resizable, so use load factor < 1
+	final HashMap<String, Integer>  typesPropsOcr = new HashMap<String, Integer>((int)Math.sqrt(properties.size()), 0.85f);
+
+	// Fill for each property in the input dataset accumulate types with occurrences and , 
 	instPStats.forEach((inst, propstat) -> {
-		if (propstat.properties != null) {
-			int matched = 0;
+		propstat.properties.trimToSize();
+		//propstat.types.trimToSize();  // Many types myght be null
+		if (propstat.properties != null && propstat.types != null) {
+			int matched = 0;  // The number of properties mathced 
 			for(String propname: propstat.properties) {
-				if(!properties.containsKey(propname))
+				Property  prop = properties.get(propname);
+				if(prop == null)
 					continue;
-				propNTypes.put(propname, propNTypes.getOrDefault(propname, 0) + propstat.types.size());
+				if(prop.types != null) {
+					// Add new types to the property
+					for(String tname: propstat.types) {
+						int pos = Collections.binarySearch(prop.types, tname);
+						if(pos >= 0)
+							continue;  // Such type already present
+						// New item
+						pos = -pos - 1;
+						prop.types.add(pos, new TypePropOcr(tname));
+					}
+				} else {
+					prop.types = propstat.types.stream().map((tname) -> new TypePropOcr(tname))
+						.collect(Collectors.toCollection(ArrayList::new));
+					assert !(propstat.types.isEmpty() || prop.types.isEmpty()): "Prop types should exist and be be assigned";
+				}
 				++matched;
 			}
-			typesnum.val += propstat.types.size() * matched;
+			if(matched == 0)
+				return;
+			// Update properties occurrences in types
+			final int  propocr = matched;
+			for(String tname: propstat.types)
+				typesPropsOcr.put(tname, typesPropsOcr.getOrDefault(tname, 0) + propocr);
 		}
 	});
-	instPStats.clear();
-	// The number of type occurances in GT from the properties existing in the input dataset
-	final int ntypesGT = typesnum.val;
+	instPStats = null;
 	
 	//******************************************************************PropertyWeighCalculation********************************************************
-	HashMap<String, Double> weightPerProperty = new HashMap<String, Double>(properties.size(), 1);
+	HashMap<String, Double> propertiesWeights = new HashMap<String, Double>(properties.size(), 1);
 	ArrayList<String> notFoundProps = new ArrayList<String>();
 
 	//System.err.println("readGtData(), propNTypes: " + (propNTypes != null ? propNTypes.size() : "null")
 	//	+ ", properties: " + (properties != null ? properties.size() : "null"));
 	properties.forEach((propname, prop) -> {
-		final double  ntypesProp = propNTypes.getOrDefault(propname, 0);
-		if(ntypesProp != 0) {
-			// Note: ntypesGT+1 to avoid 0, resulting values E (0, ~64-500), typically ~1 for almost full match
-			// Note: it would be beneficial to omit equivalent types (having the same members) before applying this formula
-			//assert ntypesProp <= ntypesGT;
-			double propertyWeight = 1./ntypesGT - Math.log(ntypesProp/ntypesGT);
-			weightPerProperty.put(propname, propertyWeight);
-		} else notFoundProps.add(propname);
+		if(prop.types == null) {
+			notFoundProps.add(propname);
+			return;
+		}
+		assert !prop.types.isEmpty(): "Property types should exist (name: " + propname
+			+ ", propocr: " + prop.occurances + ", types: " + prop.types;
+		prop.types.trimToSize();
+		// Evaluate property weight
+		// Note: the types size is not important here, it will be captured by the similarity matrix,
+		// each type impcats equally on the accumulated significance / indicativity / weight of the property
+		double weight = 0;
+		for(TypePropOcr tpo: prop.types)
+			weight += (double)tpo.propocr / typesPropsOcr.get(tpo.type);
+		weight /= prop.types.size();
+		assert !Double.isNaN(weight): "Property weight should be valid";
+		propertiesWeights.put(propname, weight);
+		prop.types = null;
 	});
+	notFoundProps.trimToSize();
+	final int  ntypesGT = typesPropsOcr.size();
+	typesPropsOcr.clear();
+	
+	//System.out.print("propertiesWeights: ");
+	//for(double w: propertiesWeights.values())
+	//	System.out.print(" " + w);
+	//System.out.println("");
+	
+	// Evaluate the median weight
 	double wmed = 1.;
-	if(!weightPerProperty.isEmpty()) {
-		ArrayList<Double> propWeights = weightPerProperty.values().stream()
+	if(!propertiesWeights.isEmpty()) {
+		ArrayList<Double> propWeights = propertiesWeights.values().stream()
 			.sorted().collect(Collectors.toCollection(ArrayList::new));
 		wmed = propWeights.get(propWeights.size() / 2);
 		// Trace assigned property weights
 		System.out.println("readGtData(), " + propWeights.size() + " pweights [" + propWeights.get(0)
 			 + ", " + propWeights.get(propWeights.size()-1) + "], mean: " + wmed + "; ntypesGT: " + ntypesGT);
-		weightPerProperty.replaceAll((name, weight) -> {
-			return Math.sqrt(Math.sqrt(1./properties.get(name).occurances) * weight);
-		});
+		// For the property weights consider also initially estimated weight
+		//propertiesWeights.replaceAll((name, weight) -> {
+		//	return Math.sqrt(Math.sqrt(1./properties.get(name).occurances) * weight);
+		//});
 	}
+
 	//// Find the median and normalize to the median
 	//Collections.sort(propWeights);  // Note: even for ntypesProp/(ntypesGT+1) -> 0  wmax < 64
 	//final int pwsize = propWeights.size();
@@ -255,9 +294,9 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 	
 	// Set remained weights as the geometric mean of the initially expeted value and evaluated mean
 	for (String prop: notFoundProps)
-		weightPerProperty.put(prop, Math.sqrt(Math.sqrt(1./properties.get(prop).occurances) * wmed));
+		propertiesWeights.put(prop, Math.sqrt(Math.sqrt(1./properties.get(prop).occurances) * wmed));
 	
-	return weightPerProperty;
+	return propertiesWeights;
 }
 		
 //*********************************************Calculating Cosin Similarity****************************************************************
@@ -274,7 +313,6 @@ public static HashMap<String, Double> readGtData(String n3DataSet) throws IOExce
 			TreeSet<String> tempTreeSet = instance1Properties;
 			instance1Properties = instance2Properties;
 			instance2Properties = tempTreeSet;
-			//tempTreeSet.clear();
 		}
 		
 		if(instance1Properties.isEmpty() || instance2Properties.isEmpty()) {

@@ -12,4 +12,6 @@
 
 # Execution of the jar
 # Note: execution from the jar causes some issues with the Common CLI linking
+# Note: -ea enables asserts, -da - disables (default)
+#LD_LIBRARY_PATH=lib java -ea:info.exascale.SimWeighted... -cp lib/\*:./\* info.exascale.SimWeighted.main $@
 LD_LIBRARY_PATH=lib java -cp lib/\*:./\* info.exascale.SimWeighted.main $@
