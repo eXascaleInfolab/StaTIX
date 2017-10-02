@@ -8,7 +8,7 @@ USAGE="$0 [-p] [-c] [<outdir>]
     modification and recompilation of some files.
     
     Compilation or the single file (.java to .class):
-    $ javac -cp lib/\*:src -d classes/ src/info/exascale/SimWeighted/main.java
+    $ javac -cp lib/\*:src -d classes/ src/info/exascale/statix/main.java
 "
 # Extract the leading "-" if any:  ${1%%[^-]*}
 # Process input options
@@ -53,7 +53,7 @@ APP=statix  # App name
 # or (the same as)
 # git log --pretty=format:'%h' -1
 REV="`git rev-parse --short HEAD`"
-MAINFILE="src/info/exascale/SimWeighted/main.java"
+MAINFILE="src/info/exascale/statix/main.java"
 MARKER='^\(\s*public static final String clirev = \"\)'
 # Check whether build is outside the repository
 if [ $? -ne 0 ]
@@ -81,7 +81,7 @@ else
 fi
 # Compile, exit on error
 echo "Compiling the classes in the \"$CLSDIR\", revision: $REV..."
-javac -cp lib/\* -sourcepath src -d "$CLSDIR" src/info/exascale/SimWeighted/*.java
+javac -cp lib/\* -sourcepath src -d "$CLSDIR" src/info/exascale/statix/*.java
 ERRCOMPILE=$?
 # Recover the original sources
 if [ -n "$REV" ]
@@ -89,7 +89,7 @@ then
 	sed -i "s/${MARKER}[^\"]*\"/\1\"/" "$MAINFILE"
 fi
 # Manual compilation of the specific class:
-# $ javac -cp lib/\* -sourcepath src -d classes/ src/info/exascale/SimWeighted/main.java
+# $ javac -cp lib/\* -sourcepath src -d classes/ src/info/exascale/statix/main.java
 if [ $ERRCOMPILE -ne 0 ]
 then
 	echo "Build failed, errcode: $ERRCOMPILE"
@@ -101,9 +101,9 @@ echo Building the ${APP}.jar in the \"$OUTDIR\" from \"$CLSDIR\"...
 # Note: other jars are not included to this one for the easier substitution of the components
 # and to avoid specification of the explicit manifest file (class path)
 # Adequate arguments are supported only by Java 9+
-# jar -c -e info.exascale.SimWeighted.main -f "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
+# jar -c -e info.exascale.statix.main -f "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
 # Own syntax is required in Java8-
-jar -cef info.exascale.SimWeighted.main "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
+jar -cef info.exascale.statix.main "$OUTDIR"/${APP}.jar -C "$CLSDIR" .
 if [ $? -ne 0 ]
 then
 	echo "Build failed, errcode: $?"

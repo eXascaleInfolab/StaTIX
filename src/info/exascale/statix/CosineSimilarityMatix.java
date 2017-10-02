@@ -1,4 +1,4 @@
-package info.exascale.SimWeighted;
+package info.exascale.statix;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

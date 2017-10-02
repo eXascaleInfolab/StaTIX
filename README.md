@@ -77,7 +77,7 @@ To infer types on multiple resolution levels (besides the whole dataset scope): 
     modification and recompilation of some files.
     
     Compilation or the single file (.java to .class):
-    $ javac -cp lib/\*:src -d classes/ src/info/exascale/SimWeighted/main.java
+    $ javac -cp lib/\*:src -d classes/ src/info/exascale/statix/main.java
 ```
 The compilation requires JDK and verified on OpenJDK 8/9 x64.  
 The build yields `statix.jar` with all requirements in the output directory (`.` by default) and optionally packs all these files to the tarball `statix.tar.gz`.
