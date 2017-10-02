@@ -3,8 +3,6 @@ package info.exascale.SimWeighted;
 import java.awt.HeadlessException;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.File;
@@ -24,23 +22,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
 
-import info.exascale.SimWeighted.NativeUtils;
 import info.exascale.daoc.*;
 
-
-//class PropertyWeight {
-//	String  property;
-//	double  weight;
-//	
-//	PropertyWeight(String property, double weight) {
-//		// Validate arguments
-//		if(property == null || property.isEmpty())
-//			throw new IllegalArgumentException("The property should be specified and should not have a negative weight (" + property + ": " + weight);
-//			
-//		this.property = property;
-//		this.weight = weight;
-//	}
-//}
 
 class PropertyOccurrences {
 	String  property;
@@ -106,7 +89,8 @@ public class main {
 		final String reference = "\nSee details in https://github.com/eXascaleInfolab/StaTIX";
 		
 		try {
-			CommandLine cmd = parser.parse(options, args);			
+			final CommandLine  cmd = parser.parse(options, args);
+			
 			// Check for the help option
 			if(cmd.hasOption("h")) {
 				formatter.printHelp(appusage, desription, options, reference);

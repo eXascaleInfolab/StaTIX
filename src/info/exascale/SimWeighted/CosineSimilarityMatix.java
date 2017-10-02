@@ -1,12 +1,12 @@
 package info.exascale.SimWeighted;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.nio.file.Paths;
+import java.nio.file.Files;
 import java.util.*;
 
 
@@ -47,52 +47,49 @@ static class PropertyExt {
 public static void readInputData(String n3DataSet, String idMapFName) throws IOException {
 	TreeMap<String, InstanceProperties> instProps = new TreeMap<String, InstanceProperties>();
 	TreeMap<String, PropertyExt> props = new TreeMap<String, PropertyExt>();
-    BufferedReader bufferedReader = new BufferedReader(new FileReader(n3DataSet));
-    BufferedWriter  idmapf = null;
     
-    if (idMapFName != null)
-		idmapf = new BufferedWriter(new FileWriter(idMapFName));
-    
-    String line = null;
-    while ((line = bufferedReader.readLine()) != null) {
-		if (line.isEmpty())
-			continue;
-        //lines.add(line);
-		String[] s = line.split(" ");
-		//if (s.length<3) continue;
-		final String instancemapKey = s[0];
-		final int id = instProps.size();
-		final String property = s[1];
-		final boolean isTyped = property.contains(typeProperty);
-		InstanceProperties instanceProperties = instProps.get(instancemapKey);
+    try(
+		BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
+		BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
+	) {    
+		String line = null;
+		while ((line = bufferedReader.readLine()) != null) {
+			if (line.isEmpty())
+				continue;
+			//lines.add(line);
+			String[] s = line.split(" ");
+			//if (s.length<3) continue;
+			final String instancemapKey = s[0];
+			final int id = instProps.size();
+			final String property = s[1];
+			final boolean isTyped = property.contains(typeProperty);
+			InstanceProperties instanceProperties = instProps.get(instancemapKey);
 
-		if (instanceProperties == null) {
-			instanceProperties = new InstanceProperties(id);
-			// Note: to have the isTyped flag the even empty properties should be added to the map
-			instProps.put(instancemapKey, instanceProperties);
-			// Form id to instance name mapping
-			if (idmapf != null)
-				idmapf.write(id + "\t" + instancemapKey + "\n");
+			if (instanceProperties == null) {
+				instanceProperties = new InstanceProperties(id);
+				// Note: to have the isTyped flag the even empty properties should be added to the map
+				instProps.put(instancemapKey, instanceProperties);
+				// Form id to instance name mapping
+				if (idmapf != null)
+					idmapf.write(id + "\t" + instancemapKey + "\n");
+			}
+			// Do not add #type property
+			if (isTyped) {
+				instanceProperties.isTyped = true;
+				continue;
+			}
+			instanceProperties.propertySet.add(property);
+			++totalOccurances;
+			
+			//********************insert to the map Treemap
+			//check if the propertyname was in the map before or not
+			PropertyExt propext = props.get(property);
+			if (propext == null) {
+				propext = new PropertyExt(property);
+				props.put(propext.name, propext);
+			} else propext.prop.occurrences++ ;
 		}
-		// Do not add #type property
-		if (isTyped) {
-			instanceProperties.isTyped = true;
-			continue;
-		}
-		instanceProperties.propertySet.add(property);
-		++totalOccurances;
-		
-		//********************insert to the map Treemap
-		//check if the propertyname was in the map before or not
-		PropertyExt propext = props.get(property);
-		if (propext == null) {
-			propext = new PropertyExt(property);
-			props.put(propext.name, propext);
-		} else propext.prop.occurrences++ ;
-    }
-    bufferedReader.close();
-    if (idmapf != null)
-		idmapf.close();
+	}
 		
 	instsProps = new HashMap<String, InstanceProperties>(instProps.size(), 1);
 	instsProps.putAll(instProps);
@@ -141,40 +138,38 @@ private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3Da
 		names.add(pos, name);
 	};
 	
-	BufferedReader  bufferedReader = new BufferedReader(new FileReader(n3DataSet));
-	String  line = null;
-	while ((line = bufferedReader.readLine()) != null) {
-		if (line.isEmpty())
-			continue;
-		//lines.add(line);
-		//if (ntypes % 100 ==0)
-		//		System.out.println(ntypes);
-		String[] s = line.split(" ");
-		
-		//if (s.length<3) continue;
-		boolean isType = false;  // Type property
-		if (s[1].contains(CosineSimilarityMatix.typeProperty))
-			isType = true;
-		
-		final String instance = s[0];
-		InstPropsStat propstat = instsSProps.get(instance);
-		if (propstat == null) {
-			propstat = new InstPropsStat();
-			instsSProps.put(instance, propstat);
-		}
-		if(!isType) {
-			if(propstat.properties == null)
-				propstat.properties = new ArrayList<String>();
-			// Update all props and get the property from the existing object
-			accnames.accept(s[1], allprops, propstat.properties);
-		} else {
-			if(propstat.types == null)
-				propstat.types = new ArrayList<String>();
-			accnames.accept(s[2], alltypes, propstat.types);
-		}
-	
+	try(Stream<String> stream = Files.lines(Paths.get(n3DataSet))) {
+		stream.forEach(line -> {
+			if (line.isEmpty())
+				return;
+			//lines.add(line);
+			//if (ntypes % 100 ==0)
+			//		System.out.println(ntypes);
+			String[] s = line.split(" ");
+			
+			//if (s.length<3) return;
+			boolean isType = false;  // Type property
+			if (s[1].contains(CosineSimilarityMatix.typeProperty))
+				isType = true;
+			
+			final String instance = s[0];
+			InstPropsStat propstat = instsSProps.get(instance);
+			if (propstat == null) {
+				propstat = new InstPropsStat();
+				instsSProps.put(instance, propstat);
+			}
+			if(!isType) {
+				if(propstat.properties == null)
+					propstat.properties = new ArrayList<String>();
+				// Update all props and get the property from the existing object
+				accnames.accept(s[1], allprops, propstat.properties);
+			} else {
+				if(propstat.types == null)
+					propstat.types = new ArrayList<String>();
+				accnames.accept(s[2], alltypes, propstat.types);
+			}
+		});
 	}
-	bufferedReader.close();
 	return instsSProps;
 }
 
