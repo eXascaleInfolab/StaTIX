@@ -1,12 +1,13 @@
 # StaTIX
 Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in the N3 or N-Quads format. This is a Master Project of Soheil Roshankish.
 
-\authors: (c) Soheil Roshankish, Artem Lutov <artem@exascale.info>  
+\authors: (c) Artem Lutov <artem@exascale.info>, Soheil Roshankish  
 \license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
 \organization: [eXascale Infolab](http://exascale.info/)  
-\date: 2017-08
+
 
 ## Content
+
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Usage](#usage)
