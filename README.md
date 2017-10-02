@@ -25,7 +25,8 @@ Accuracy of the StaTIX type inference (see details in [TInfES](https://github.co
 ![F1h](images/F1h_Algs.png)
 
 ## Requirements
-*StaTIX* uses *DAOC* clustering library and *Apache [Commons CLI](https://commons.apache.org/proper/commons-cli/)* arguments parser. Both libraries are included into the repository and located in the `/lib` dir.
+*StaTIX* uses *DAOC* clustering library and *Apache [Commons CLI](https://commons.apache.org/proper/commons-cli/)* arguments parser. Both libraries are included into the repository and located in the `/lib` dir.  
+*Java 1.8* is required to compile (JDK) or execute (JRE) *StaTIX*, on Linux Ubuntu Java can be install executing: `$ sudo apt-get install openjdk-8-jdk-headless`. On other platforms Java can be downloaded from the [OpenJDK](http://openjdk.java.net/install/) or [Oracle](http://www.oracle.com/technetwork/java/javase/downloads/index.html) sites.
 
 *DAOC* is a C++ clustering library with [SWIG](http://www.swig.org/)-generated Java interface. The provided native library (`libdaoc.so`) is built on *Ubuntu 16.04 x64* (and might also work in the [Ubuntu console of Windows 10 x64](https://www.windowscentral.com/how-install-bash-shell-command-line-windows-10)). *DAOC* should be rebuilt from the sources to run *StaTIX* on other platforms.
 
@@ -36,6 +37,20 @@ Accuracy of the StaTIX type inference (see details in [TInfES](https://github.co
 Usage: ./run.sh [OPTIONS...] <inputfile.rdf>
 Statistical type inference in fully automatic and semi supervised modes
 Options:
+ -b,--brief-hints <arg>    Brief hits, possible values:
+                           '--'  - interactive hints
+                           '<filename.ipl>'  - read from the file having
+                           the format for each line:
+                           <indicativity> <property>
+                           where indicativity E [0, 1]; 0 - the property
+                           has no any impact on the entity type, 1 - the
+                           property fully specifies the entity type, line
+                           comments starting with '#' are allowed.
+                           '-[<nopts=INF>]'  - automatic generation of the
+                           hints to the <inpfile_marks.ipl>, where <marks>
+                           is the range of marks (>= 2) on supervision,
+                           which defines the indicativity precision
+                           eps=1/(marks*2): eps=0.167 for 3 marks
  -f,--filter               Filter out from the resulting clusters all
                            subjects that do not have #type property in the
                            input dataset, used for the type inference
@@ -56,7 +71,7 @@ Options:
                            by non-significant relations to reduce memory
                            consumption and speedup the clustering.
                            Options: a - accurate, m - mean, s - severe.
-                           Recommended for large datasets.
+                           Recommended for large datasets
  -s,--scale <arg>          Scale (resolution, gamma parameter of the
                            clustering), -1 is automatic scale inference
                            for each cluster, >=0 is the forced static

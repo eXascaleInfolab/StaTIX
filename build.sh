@@ -54,7 +54,7 @@ APP=statix  # App name
 # git log --pretty=format:'%h' -1
 REV="`git rev-parse --short HEAD`"
 MAINFILE="src/info/exascale/statix/main.java"
-MARKER='^\(\s*public static final String clirev = \"\)'
+MARKER='^\(\s*public static final String \s*clirev = \"\)'
 # Check whether build is outside the repository
 if [ $? -ne 0 ]
 then
