@@ -3,6 +3,7 @@ package info.exascale.statix;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -12,22 +13,6 @@ import java.util.stream.Collectors;
 import java.util.*;
 
 import info.exascale.daoc.*;
-
-
-class PropertyOccurrences {
-	String  property;
-	int  occurrences;
-	
-	PropertyOccurrences(String property, int occurrences) {
-		// Validate arguments
-		if(property == null || property.isEmpty() || occurrences <= 0)
-			throw new IllegalArgumentException("The property should be specified and have positive occurrences:  "
-				+ property + ", " + occurrences);
-			
-		this.property = property;
-		this.occurrences = occurrences;
-	}
-}
 
 
 public class Statix {
@@ -61,17 +46,28 @@ public class Statix {
 	//! @param hdprops  - head properties view
 	//! @param hints  - file name containing indicativity hints of the properties
 	protected void askHints(HashMap<String, Float> propsWeights, ArrayList<PropertyOccurrences> hdprops, String hints) {
-		
+		throw new UnsupportedOperationException("Not implemented yet...");
 	}
 	
-	//! Generate hints from the specified file
+	//! Save properties weights (hints) to the specified file
 	//!
-	//! @param propsWeights  - updating property weights
-	//! @param hdprops  - head properties view
+	//! @param propsWeights  - saving properties weights
 	//! @param eps  - eps of the required indicativity precision
 	//! @param hints  - file name containing indicativity hints of the properties
-	protected void generateHints(HashMap<String, Float> propsWeights, ArrayList<PropertyOccurrences> hdprops, double eps, String hints) throws IOException {
-		;
+	protected void saveHints(HashMap<String, Float> propsWeights, double eps, String hints) throws IOException {
+		try(BufferedWriter  writer = Files.newBufferedWriter(Paths.get(hints))) {
+			propsWeights.forEach((prop, weight) -> {
+				try {
+					if(eps > 0)
+						weight += (float)Math.IEEEremainder((double)weight, eps);
+					writer.write(weight + '\t' + prop + '\n');
+				} catch(IOException err) {
+					throw new UncheckedIOException(err);
+				}
+			});
+		} catch(UncheckedIOException err) {
+			throw new IOException(err);
+		}
 	}
 	
 	//! Load hints from the specified file
@@ -94,24 +90,43 @@ public class Statix {
 			});
 		}
 	}
+
+	static class PropertyOccurrences {
+		String  property;  //!< Property name
+		int  occurrences;  //!< Total number of occurrences of the property
+		
+		PropertyOccurrences(String property, int occurrences) {
+			// Validate arguments
+			if(property == null || property.isEmpty() || occurrences <= 0)
+				throw new IllegalArgumentException("The property should be specified and have positive occurrences:  "
+					+ property + ", " + occurrences);
+				
+			this.property = property;
+			this.occurrences = occurrences;
+		}
+	}
 	
 	//In case that only input file is givven to the app (without Ground-TRuth dataset)all the property weights will be set = 1
 	public void loadDataset(String n3DataSet, boolean filteringOn, String idMapFName, String hints) throws IOException {
-		HashMap<String, Property>  properties = csmat.loadInputData(n3DataSet, filteringOn, idMapFName);
+		HashMap<String, Integer>  properties = csmat.loadInputData(n3DataSet, filteringOn, idMapFName);
+		
+		if(properties.isEmpty()) {
+			System.err.println("WARNING, there are not any properties to be processed in the input dataset: " + n3DataSet);
+			System.exit(0);
+		}
 				
 		HashMap<String, Float> propsWeights = new HashMap<String, Float>(properties.size(), 1);
-		properties.forEach((propname, prop) -> {
+		properties.forEach((propname, ocrs) -> {
 			// The more seldom property, the higher it's weight
-			propsWeights.put(propname, (float)Math.sqrt(1./prop.occurrences));
+			propsWeights.put(propname, (float)Math.sqrt(1./ocrs));
 		});
 
 		// Apply the hints for the property weights if any
 		if(hints != null) {
 			if(hints.startsWith("-")) {
 				ArrayList<PropertyOccurrences>  props = properties.entrySet().stream()
-					.map(entry -> new PropertyOccurrences(entry.getKey(), entry.getValue().occurrences))
+					.map(entry -> new PropertyOccurrences(entry.getKey(), entry.getValue()))
 					.collect(Collectors.toCollection(ArrayList::new));
-				properties = null;  // Properties are not required any more
 				// Sort properties by the decreasing occurrances
 				props.sort((p1, p2) -> p2.occurrences-p1.occurrences);
 				// Check whether the hints are required for this dataset by comparing
@@ -126,10 +141,25 @@ public class Statix {
 				for(; iehead < eheadMax && headWeight < tailWeight; ++iehead)
 					headWeight += 1./props.get(iehead).occurrences;
 				++iehead;  // Include the last evaluated item
+				
+				// Check for the first significant weight drop if any
+				int  iewdrop = 0;
+				int  ocrlast = props.get(iewdrop++).occurrences;  // The number of property occurrences
+				for(; iewdrop < iehead; ++iewdrop) {
+					int ocr = props.get(iewdrop).occurrences;
+					if((ocrlast - ocr) * 2 >= ocrlast)
+						break;
+					ocrlast = ocr;
+				}
+				
+				// Trace the indexes
+				System.out.println("Head size: " + iewdrop + " (from " + iehead + " of " + props.size());
+				// Reduce the properties to be supervised
+				iehead = iewdrop;
 				props.subList(iehead, props.size()).clear();
 				props.trimToSize();
 				
-				if(headWeight >= tailWeight) {
+				if(iehead < eheadMax) {
 					if(hints == "--") {
 						// Note: Strings are immutable in Java
 						String  hintsName = updateFileExtension(n3DataSet, extHints);
@@ -145,16 +175,27 @@ public class Statix {
 						if(!nopts.isEmpty())
 							ext = "_" + nopts + ext;
 						String  hintsName = updateFileExtension(n3DataSet, ext);
-						generateHints(propsWeights, props, eps, hintsName);
+						//
+						HashMap<String, Integer>  targProps = new HashMap<String, Integer>(props.size(), 1);
+						props.stream().forEach(psocrs -> {
+							targProps.put(psocrs.property, psocrs.occurrences);
+						});
+						props = null;
+						csmat.loadGtData(n3DataSet, targProps);
+						// Update propsWeights with the supervised weights
+						propsWeights.putAll(csmat.propsWeights);
+						// Update the attribute
+						csmat.propsWeights = propsWeights;
+						saveHints(propsWeights, eps, hintsName);
 					}
-				} else System.err.println("WARNING, the 'brief hints' are omitted because the property weights distribution is not heavy tailed in " + n3DataSet);
+				} else System.err.println("WARNING, the 'brief hints' are omitted because the property weights distribution is not the heavy tailed in " + n3DataSet);
 			} else loadHints(propsWeights, hints);
 		}
 
 		if(tracingOn)
 			System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = "
 				+ propsWeights.get("<http://www.w3.org/2002/07/owl#sameAs>"));
-		csmat.setPropsWeights(propsWeights);
+		csmat.propsWeights = propsWeights;
 	}
 
 	//This function first check if it is out put results from before and will delete them before running the app and then read the directory for input dataset
@@ -166,7 +207,7 @@ public class Statix {
 	//! 	useful for the benchmarking working with ground-truth files
 	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
 	public void loadDatasets(String inpfname, String lblfname, boolean filteringOn, String idMapFName) throws Exception {
-		HashMap<String, Property>  properties = csmat.loadInputData(inpfname, filteringOn, idMapFName);
+		HashMap<String, Integer>  properties = csmat.loadInputData(inpfname, filteringOn, idMapFName);
 		csmat.loadGtData(lblfname, properties);
 	}
 
