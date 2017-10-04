@@ -5,6 +5,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.File;
+import java.io.Console;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.regex.Pattern;
@@ -45,8 +46,54 @@ public class Statix {
 	//! @param propsWeights  - updating property weights
 	//! @param hdprops  - head properties view
 	//! @param hints  - file name containing indicativity hints of the properties
-	protected void askHints(HashMap<String, Float> propsWeights, ArrayList<PropertyOccurrences> hdprops, String hints) {
-		throw new UnsupportedOperationException("Not implemented yet...");
+	protected void askHints(HashMap<String, Float> propsWeights, String[] hdprops, String hints) throws IOException {
+		Console  cons = System.console();
+		if(cons == null)
+			throw new IOException("System console is not available");
+		// Read the number of marks / evalaution granularity
+		final int  marksDfl = 10;
+		String  marks = cons.readLine("Input evaluation range for each property, natural number >= 2 [%d]: ", marksDfl);
+		final int  nmarks = marks != null ? Integer.parseInt(marks): marksDfl;
+		if(nmarks < 2)
+			throw new IllegalArgumentException("The number of marks is too small: " + nmarks);
+		final float eps = 0.5f/nmarks;  // Input accuracy
+		
+		//char skip = '';
+	
+		// Read properties indicativity
+		cons.printf("Input significance of the properties in the range 1 .. %d for at most %d properties. Leave the input empty (just 'enter') to skip the property evaluation or in case the property is absolutely insignificant. Use 'q' to quit early, 'p' to update the previous evaluation", nmarks, hdprops.length);
+		HashMap<String, Float>  pweights = new HashMap<String, Float>(hdprops.length, 1);
+		int i = 0;  // Index of the evaluating property
+		int skips = 0;  // The number of skipped properties
+		while(i < hdprops.length) {
+			String  val = cons.readLine("%s: ", hdprops[i]);
+			// Check control values
+			if(val == "q")
+				break;  // Quit
+			else if(val == null) {
+				++skips;
+				++i;  // Take next
+				continue;
+			} else if(val == "p") {
+				// Repeat previous input if possible
+				if(i > 0)
+					--i;
+				continue;
+			} else {
+				// Convert the input significance value to the probability
+				final int  mark = Integer.parseInt(val);
+				if(mark <= 0 || mark > nmarks) {
+					System.err.println("WARNING, the specified property significance is out of the range 1 .. " + nmarks + ": " + mark + ". Correct the specified value.");
+					continue;  // Reinput againg
+				}
+				pweights.put(hdprops[i], eps + (float)(mark - 1) / nmarks);
+			}
+			++i;
+		}
+		
+		String  hintsName = updateFileExtension(hints, "_" + nmarks + extHints);
+		saveHints(pweights, (double)eps, hintsName);
+		propsWeights.putAll(pweights);
 	}
 	
 	//! Save properties weights (hints) to the specified file
@@ -55,7 +102,14 @@ public class Statix {
 	//! @param eps  - eps of the required indicativity precision
 	//! @param hints  - file name containing indicativity hints of the properties
 	protected void saveHints(HashMap<String, Float> propsWeights, double eps, String hints) throws IOException {
+		if(propsWeights.isEmpty()) {
+			System.err.println("WARNING, the hints output is omitted: propsWeights are empty");
+			return;
+		}
+		
 		try(BufferedWriter  writer = Files.newBufferedWriter(Paths.get(hints))) {
+			// Output file header
+			writer.write("#/ Properties: " + propsWeights.size() + "\n");
 			propsWeights.forEach((prop, weight) -> {
 				try {
 					if(eps > 0)
@@ -108,15 +162,15 @@ public class Statix {
 	
 	//In case that only input file is givven to the app (without Ground-TRuth dataset)all the property weights will be set = 1
 	public void loadDataset(String n3DataSet, boolean filteringOn, String idMapFName, String hints) throws IOException {
-		HashMap<String, Integer>  properties = csmat.loadInputData(n3DataSet, filteringOn, idMapFName);
+		HashMap<String, Integer>  propsocrs = csmat.loadInputData(n3DataSet, filteringOn, idMapFName);
 		
-		if(properties.isEmpty()) {
+		if(propsocrs.isEmpty()) {
 			System.err.println("WARNING, there are not any properties to be processed in the input dataset: " + n3DataSet);
 			System.exit(0);
 		}
 				
-		HashMap<String, Float> propsWeights = new HashMap<String, Float>(properties.size(), 1);
-		properties.forEach((propname, ocrs) -> {
+		HashMap<String, Float> propsWeights = new HashMap<String, Float>(propsocrs.size(), 1);
+		propsocrs.forEach((propname, ocrs) -> {
 			// The more seldom property, the higher it's weight
 			propsWeights.put(propname, (float)Math.sqrt(1./ocrs));
 		});
@@ -124,7 +178,7 @@ public class Statix {
 		// Apply the hints for the property weights if any
 		if(hints != null) {
 			if(hints.startsWith("-")) {
-				ArrayList<PropertyOccurrences>  props = properties.entrySet().stream()
+				ArrayList<PropertyOccurrences>  props = propsocrs.entrySet().stream()
 					.map(entry -> new PropertyOccurrences(entry.getKey(), entry.getValue()))
 					.collect(Collectors.toCollection(ArrayList::new));
 				// Sort properties by the decreasing occurrances
@@ -163,7 +217,7 @@ public class Statix {
 					if(hints == "--") {
 						// Note: Strings are immutable in Java
 						String  hintsName = updateFileExtension(n3DataSet, extHints);
-						askHints(propsWeights, props, hintsName);
+						askHints(propsWeights, props.stream().map(psocrs -> psocrs.property).toArray(String[]::new), hintsName);
 					} else {
 						String nopts = hints.substring(1);  // The number of marks (options)
 						final int optsNum = Integer.parseInt(nopts);
@@ -175,7 +229,7 @@ public class Statix {
 						if(!nopts.isEmpty())
 							ext = "_" + nopts + ext;
 						String  hintsName = updateFileExtension(n3DataSet, ext);
-						//
+						// Evaluate property weights using prelabeld data
 						HashMap<String, Integer>  targProps = new HashMap<String, Integer>(props.size(), 1);
 						props.stream().forEach(psocrs -> {
 							targProps.put(psocrs.property, psocrs.occurrences);
@@ -207,8 +261,8 @@ public class Statix {
 	//! 	useful for the benchmarking working with ground-truth files
 	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
 	public void loadDatasets(String inpfname, String lblfname, boolean filteringOn, String idMapFName) throws Exception {
-		HashMap<String, Integer>  properties = csmat.loadInputData(inpfname, filteringOn, idMapFName);
-		csmat.loadGtData(lblfname, properties);
+		HashMap<String, Integer>  propsocrs = csmat.loadInputData(inpfname, filteringOn, idMapFName);
+		csmat.loadGtData(lblfname, propsocrs);
 	}
 
 	protected Graph buildGraph() {

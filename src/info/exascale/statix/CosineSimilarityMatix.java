@@ -21,8 +21,8 @@ public class CosineSimilarityMatix {
 
 	// Output id mapping if required (idMapFName != null)
 	public CosineSimilarityMatix(String inpfname, String lblfname, String idMapFName) throws IOException {
-		HashMap<String, Integer>  properties = loadInputData(inpfname, false, idMapFName);
-		loadGtData(lblfname, properties);
+		HashMap<String, Integer>  propsocrs = loadInputData(inpfname, false, idMapFName);
+		loadGtData(lblfname, propsocrs);
 	}
 	
 	//! Unique entity instances (subjects)
@@ -33,8 +33,8 @@ public class CosineSimilarityMatix {
 	
 	// Output id mapping if required (idMapFName != null)
 	public double[][] cosineSimilarity(String inpfname, String lblfname, String idMapFName) throws IOException {
-		HashMap<String, Integer>  properties = loadInputData(inpfname, false, idMapFName);
-		loadGtData(lblfname, properties);
+		HashMap<String, Integer>  propsocrs = loadInputData(inpfname, false, idMapFName);
+		loadGtData(lblfname, propsocrs);
 		return symmetricMatrixProgram();
 	}
 
@@ -54,7 +54,7 @@ public class CosineSimilarityMatix {
 	//! @param filteringOn  - filter out non-typed instances from the output by inverting their ids,
 	//! 	useful for the benchmarking working with ground-truth files
 	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
-	//! @return properties  - loaded properties statistics
+	//! @return properties  - loaded properties statistics (occurrences)
 	public HashMap<String, Integer> loadInputData(String n3DataSet, boolean filteringOn, String idMapFName) throws IOException {
 		TreeMap<String, InstanceProperties> instProps = new TreeMap<String, InstanceProperties>();
 		TreeMap<String, PropertyExt> props = new TreeMap<String, PropertyExt>();
@@ -133,11 +133,11 @@ public class CosineSimilarityMatix {
 			});
 		}
 
-		HashMap<String, Integer> properties = new HashMap<String, Integer>(props.size(), 1);
+		HashMap<String, Integer> propsocrs = new HashMap<String, Integer>(props.size(), 1);
 		props.forEach((name, propx) -> {
-			properties.put(name, propx.ocrs);
+			propsocrs.put(name, propx.ocrs);
 		});
-		return properties;
+		return propsocrs;
 	}
 
 	static class InstPropsStat {
@@ -258,18 +258,18 @@ public class CosineSimilarityMatix {
 	//! Evaluate properties weights loading the labeled dataset
 	//!
 	//! @param n3DataSet  - RDF dataset in N3/quad format containing the type information
-	//! @param properties  - properties and their occurrences from the input dataset, whose weight should be evalauted
+	//! @param propsocrs  - properties and their occurrences from the input dataset, whose weight should be evalauted
 	//! @param purePropStat  - evaluate instances statistics for all or only for the specified properties
-	public void loadGtData(String n3DataSet, HashMap<String, Integer> properties, final boolean purePropStat) throws IOException {
+	public void loadGtData(String n3DataSet, HashMap<String, Integer> propsocrs, final boolean purePropStat) throws IOException {
 		// Instance (subject): InstPropsStat
 		// Note: properties.keySet() has sense to supply only for the huge GT datasets like DBPedia, not for the prelabled samples
-		TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet, purePropStat ? properties.keySet() : null);  // != null ? targProps : properties.keySet());
+		TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet, purePropStat ? propsocrs.keySet() : null);  // != null ? targProps : properties.keySet());
 		// The estimated number of types is square root of the number of properties
 		// Note: this hasmap will be resized is resizable, so use load factor < 1
-		final HashMap<String, TypeStat>  typesStats = new HashMap<String, TypeStat>((int)Math.sqrt(properties.size()), 0.85f);
+		final HashMap<String, TypeStat>  typesStats = new HashMap<String, TypeStat>((int)Math.sqrt(propsocrs.size()), 0.85f);
 		final ValWrapper<Integer> instsNum = new ValWrapper<Integer>(0);
-		final HashMap<String, ArrayList<TypePropOcr>>  propsTypes = new HashMap<String, ArrayList<TypePropOcr>>(properties.size(), 1);
-		properties.keySet().forEach(prop -> {
+		final HashMap<String, ArrayList<TypePropOcr>>  propsTypes = new HashMap<String, ArrayList<TypePropOcr>>(propsocrs.size(), 1);
+		propsocrs.keySet().forEach(prop -> {
 			propsTypes.put(prop, null);
 		});
 
@@ -320,11 +320,11 @@ public class CosineSimilarityMatix {
 		instPStats = null;
 		
 		// PropertyWeighCalculation --------------------------------------------
-		final HashMap<String, Float> propertiesWeights = new HashMap<String, Float>(properties.size(), 1);
+		final HashMap<String, Float> propertiesWeights = new HashMap<String, Float>(propsocrs.size(), 1);
 		final ArrayList<String> notFoundProps = new ArrayList<String>();
 
 		//System.err.println("loadGtData(), propNTypes: " + (propNTypes != null ? propNTypes.size() : "null")
-		//	+ ", properties: " + (properties != null ? properties.size() : "null"));
+		//	+ ", properties: " + (propsocrs != null ? propsocrs.size() : "null"));
 		propsTypes.forEach((propname, ptocrs) -> {
 			if(ptocrs == null) {
 				notFoundProps.add(propname);
@@ -370,13 +370,13 @@ public class CosineSimilarityMatix {
 				 + ", " + propWeights.get(propWeights.size()-1) + "], mean: " + wmed + "; ntypesGT: " + ntypesGT);
 			// For the property weights consider also initially estimated weight
 			//propertiesWeights.replaceAll((name, weight) -> {
-			//	return Math.sqrt(Math.sqrt(1./properties.get(name)) * weight);
+			//	return Math.sqrt(Math.sqrt(1./propsocrs.get(name)) * weight);
 			//});
 		}
 		
 		// Set remained weights as the geometric mean of the initially expeted value and evaluated mean
 		for(String prop: notFoundProps)
-			propertiesWeights.put(prop, (float)Math.sqrt(Math.sqrt(1./properties.get(prop)) * wmed));
+			propertiesWeights.put(prop, (float)Math.sqrt(Math.sqrt(1./propsocrs.get(prop)) * wmed));
 		
 		// Note: anyway superwised weights E [0, 1]
 		//// Normalize all weights to the median to have meanfull and uniform interpretation of sqrt and ^2 operations
@@ -387,8 +387,8 @@ public class CosineSimilarityMatix {
 		this.propsWeights = propertiesWeights;
 	}
 
-	public void loadGtData(String n3DataSet, HashMap<String, Integer> properties) throws IOException {
-		loadGtData(n3DataSet, properties, true);
+	public void loadGtData(String n3DataSet, HashMap<String, Integer> propsocrs) throws IOException {
+		loadGtData(n3DataSet, propsocrs, true);
 	}
 
 	//*********************************************Calculating Cosin Similarity****************************************************************
