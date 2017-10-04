@@ -61,7 +61,7 @@ public class Statix {
 		//char skip = '';
 	
 		// Read properties indicativity
-		cons.printf("Input significance of the properties in the range 1 .. %d for at most %d properties. Leave the input empty (just 'enter') to skip the property evaluation or in case the property is absolutely insignificant. Use 'q' to quit early, 'p' to update the previous evaluation", nmarks, hdprops.length);
+		cons.printf("Input significance of the properties in the range 1 .. %d for at most %d properties. Leave the input empty (just 'enter') to skip the property evaluation or in case the property is absolutely insignificant. Use 'q' to quit early, 'p' to update the previous evaluation\n", nmarks, hdprops.length);
 		HashMap<String, Float>  pweights = new HashMap<String, Float>(hdprops.length, 1);
 		int i = 0;  // Index of the evaluating property
 		int skips = 0;  // The number of skipped properties
@@ -90,6 +90,7 @@ public class Statix {
 			}
 			++i;
 		}
+		cons.printf("Supervision completed: %d properties are evalauted and %d skipped of %d candidates\n", i - skips, skips, hdprops.length);
 		
 		String  hintsName = updateFileExtension(hints, "_" + nmarks + extHints);
 		saveHints(pweights, (double)eps, hintsName);
@@ -122,6 +123,7 @@ public class Statix {
 		} catch(UncheckedIOException err) {
 			throw new IOException(err);
 		}
+		System.out.println(propsWeights.size() + " property weights (significance) are saved to the: " + hints);
 	}
 	
 	//! Load hints from the specified file
