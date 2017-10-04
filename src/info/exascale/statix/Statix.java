@@ -93,6 +93,7 @@ public class Statix {
 		cons.printf("Supervision completed: %d properties are evalauted and %d skipped of %d candidates\n", i - skips, skips, hdprops.length);
 		
 		String  hintsName = updateFileExtension(hints, "_" + nmarks + extHints);
+		// Note: the weights are updated considering eps
 		saveHints(pweights, (double)eps, hintsName);
 		propsWeights.putAll(pweights);
 	}
@@ -111,7 +112,7 @@ public class Statix {
 		try(BufferedWriter  writer = Files.newBufferedWriter(Paths.get(hints))) {
 			// Output file header
 			writer.write("#/ Properties: " + propsWeights.size() + "\n");
-			propsWeights.forEach((prop, weight) -> {
+			propsWeights.replaceAll((prop, weight) -> {
 				try {
 					if(eps > 0)
 						weight += (float)Math.IEEEremainder((double)weight, eps);
@@ -119,6 +120,7 @@ public class Statix {
 				} catch(IOException err) {
 					throw new UncheckedIOException(err);
 				}
+				return weight;
 			});
 		} catch(UncheckedIOException err) {
 			throw new IOException(err);
@@ -219,6 +221,7 @@ public class Statix {
 					if(hints == "--") {
 						// Note: Strings are immutable in Java
 						String  hintsName = updateFileExtension(n3DataSet, extHints);
+						// Note: the weights are updated considering eps
 						askHints(propsWeights, props.stream().map(psocrs -> psocrs.property).toArray(String[]::new), hintsName);
 					} else {
 						String nopts = hints.substring(1);  // The number of marks (options)
@@ -238,10 +241,9 @@ public class Statix {
 						});
 						props = null;
 						csmat.loadGtData(n3DataSet, targProps);
-						// Update propsWeights with the supervised weights
+						// Update propsWeights with the supervised weights of targProps
 						propsWeights.putAll(csmat.propsWeights);
-						// Update the attribute
-						csmat.propsWeights = propsWeights;
+						// Note: the weights are updated considering eps
 						saveHints(propsWeights, eps, hintsName);
 					}
 				} else System.err.println("WARNING, the 'brief hints' are omitted because the property weights distribution is not the heavy tailed in " + n3DataSet);
@@ -251,6 +253,7 @@ public class Statix {
 		if(tracingOn)
 			System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = "
 				+ propsWeights.get("<http://www.w3.org/2002/07/owl#sameAs>"));
+		// Save propsWeights to the attribute
 		csmat.propsWeights = propsWeights;
 	}
 
