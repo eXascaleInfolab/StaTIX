@@ -68,6 +68,8 @@ public class main {
 				
 				System.out.println("r-" + Statix.daocRevision() + "." + clirevPure);
 				System.out.println("= Client Build =\nRevision: " + clirevPure + "\nTime: " + clirevTime);
+				if(!Statix.daocSwigRevision().isEmpty())
+					System.out.println("SWIG revision: " + Statix.daocSwigRevision());
 				System.out.println("= Library Build =\n" + Statix.daocBuildInfo());
 				System.exit(0);
 			}

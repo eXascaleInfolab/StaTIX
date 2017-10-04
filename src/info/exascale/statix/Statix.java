@@ -30,6 +30,7 @@ public class Statix {
 	
 	public static String daocRevision()  { return daoc.libBuild().rev(); }
 	public static String daocBuildInfo()  { return daoc.libBuild().summary(); }
+	public static String daocSwigRevision()  { return daoc.swigRevision(); }
 	
 	//! Update file extension to the specified one
 	public static String updateFileExtension(String filename, final String ext) {
