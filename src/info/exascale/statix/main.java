@@ -22,7 +22,7 @@ public class main {
 		final OptionGroup optspv = new OptionGroup();
 		// Option(String opt, String longOpt, boolean hasArg, String description)
 		// ground-truth or annotated, labeled
-		optspv.addOption(new Option("g", "ground-truth", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties)"));
+		optspv.addOption(new Option("g", "groundtruth-sample", true, "The ground-truth sample (subset of the input dataset or another similar dataset with the specified type properties)"));
 		optspv.addOption(new Option("b", "brief-hints", true, "Brief hits, possible values:\n'--'  - interactive hints \n'<filename" + Statix.extHints + ">'  - read from the file having the format for each line:\n<indicativity> <property> \nwhere indicativity E [0, 1]; 0 - the property has no any impact on the entity type, 1 - the property fully specifies the entity type, line comments starting with '#' are allowed. \n'-[<nopts=INF>]'  - automatic generation of the hints to the <inpfile_marks" + Statix.extHints + ">, where <marks> is the range of marks (>= 2) on supervision, which defines the indicativity precision eps=0.5/(marks + 1): eps=0.167 for 2 marks"));  // Center of each band is eps + eps*i, delta: +/-eps, wide: eps*2
 		
 		Options options = new Options();
@@ -31,11 +31,12 @@ public class main {
 		//options.addOption("p", "supervised", true, "Supervision hint data in the format: <indicativity>\t <property>, where indicativity E [0, 1], '#' line comments are allowed.");
 		options.addOptionGroup(optspv);
 		options.addOption("o", "output", true, "Output file, default: <inpfile>" + Statix.extCls);
-		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id>	<subject_name>), default: disabled");
+		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id> <subject_name>), default: disabled");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
+		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format");
 		options.addOption("v", "version", false, "Show version");
 		
 		HelpFormatter formatter = new HelpFormatter();
@@ -77,6 +78,15 @@ public class main {
 			String[] files = cmd.getArgs();
 			if(files.length != 1)
 				throw new IllegalArgumentException("A single input dataset is expected with optimal parameters");
+			
+			// Check for the GT extraction
+			if(cmd.hasOption("e")) {
+				String idMapFName = null;
+				if(cmd.hasOption("n"))
+					idMapFName = cmd.getOptionValue("n");				
+				CosineSimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName);
+				System.exit(0);
+			}
 
 			// Check for the filtering option
 			// ATTENTION: should be done before the input datasets reading

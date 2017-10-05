@@ -71,6 +71,70 @@ public class CosineSimilarityMatix {
 		return symmetricMatrixProgram();
 	}
 
+	//! Extract ground truth cluster members (sunbjects ids of types)
+	//! 
+	//! @param n3DataSet  - input dataset with labeled types
+	//! @param clsFName  - output clusters in the .cnl format
+	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
+	public static void extractGT(String n3DataSet, String clsFName, String idMapFName) throws IOException {
+		TreeMap<String, Integer> instances = new TreeMap<String, Integer>();
+		TreeMap<String, ArrayList<Integer>> typesInstances = new TreeMap<String, ArrayList<Integer>>();
+
+		try(
+			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
+			BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
+			BufferedWriter  clsf = Files.newBufferedWriter(Paths.get(clsFName));
+		) {    
+			final int  idNone = -1;
+			String  line = null;
+			while((line = bufferedReader.readLine()) != null) {
+				if (line.isEmpty())
+					continue;
+				String[] s = line.split(" ", 3);  // RDF triple resources (parts)
+				// See RDF triple format details: https://www.w3.org/TR/2004/REC-rdf-concepts-20040210/#section-triples
+				if(s.length < 3)
+					throw new IllegalArgumentException("The file contains non N3/quad tripple: " + line);
+				String obj = s[2];
+				if(obj.startsWith("\"")) {
+					int iend = obj.indexOf('"', 1) + 1;
+					iend = obj.indexOf(' ', iend);
+					if(iend != -1)
+						s[2] = obj = obj.substring(0, iend);
+				} else s[2] = obj = obj.substring(0, obj.indexOf('>', 1) + 1);
+
+				final String inst = s[0];
+				int id = instances.size();
+				if(!instances.containsKey(inst)) {
+					instances.put(inst, id);
+					// Form id to instance name mapping
+					if(idmapf != null)
+						idmapf.write(id + "\t" + inst + "\n");
+				} else id = idNone;
+
+				// Check for the type property
+				if(s[1].contains(typeProperty)) {
+					ArrayList<Integer> iids = typesInstances.get(obj);
+					if(iids == null) {
+						iids = new ArrayList<Integer>();
+						typesInstances.put(obj, iids);
+					}
+					if(id == idNone)
+						id = instances.get(inst);
+					iids.add(id);
+				}
+			}
+			
+			for(ArrayList<Integer> iids: typesInstances.values()) {
+				for(int pid: iids)
+					clsf.write(pid + " ");
+				clsf.write("\n");
+			}
+			System.out.println("Ground-truth extracted from " + n3DataSet + " to " + clsFName);
+			if(idMapFName != null)
+				System.out.println("Instance id to name (subject) mapping is formed: " + idMapFName);
+		}
+	}
+
 	static class PropertyExt {
 		public String  name;
 		public int  ocrs;  // The number of occurrences
@@ -96,27 +160,35 @@ public class CosineSimilarityMatix {
 		try(
 			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
 			BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
-		) {    
-			String line = null;
+		) {   
+			String  line = null;
 			while ((line = bufferedReader.readLine()) != null) {
 				if (line.isEmpty())
 					continue;
-				//lines.add(line);
-				String[] s = line.split(" ");
-				//if (s.length<3) continue;
-				final String instancemapKey = s[0];
+				String[] s = line.split(" ", 3);  // RDF triple resources (parts)
+				if(s.length < 3)
+					throw new IllegalArgumentException("The file contains non N3/quad tripple: " + line);
+				String obj = s[2];
+				if(obj.startsWith("\"")) {
+					int iend = obj.indexOf('"', 1) + 1;
+					iend = obj.indexOf(' ', iend);
+					if(iend != -1)
+						s[2] = obj = obj.substring(0, iend);
+				} else s[2] = obj = obj.substring(0, obj.indexOf('>', 1) + 1);
+					
+				final String inst = s[0];
 				final int id = instProps.size();
 				final String property = s[1];
 				final boolean isTyped = property.contains(typeProperty);
-				InstanceProperties instanceProperties = instProps.get(instancemapKey);
+				InstanceProperties instanceProperties = instProps.get(inst);
 
 				if (instanceProperties == null) {
 					instanceProperties = new InstanceProperties(id);
 					// Note: to have the isTyped flag the even empty properties should be added to the map
-					instProps.put(instancemapKey, instanceProperties);
+					instProps.put(inst, instanceProperties);
 					// Form id to instance name mapping
 					if (idmapf != null)
-						idmapf.write(id + "\t" + instancemapKey + "\n");
+						idmapf.write(id + "\t" + inst + "\n");
 				}
 				// Do not add #type property
 				if (isTyped) {
@@ -134,6 +206,8 @@ public class CosineSimilarityMatix {
 					props.put(propext.name, propext);
 				} else ++propext.ocrs;
 			}
+			if(idMapFName != null)
+				System.out.println("Instance id to name (subject) mapping is formed: " + idMapFName);
 		}
 		// Save total number of occurrences to the attribute
 		this.propsocrs = ocrs;
@@ -214,14 +288,20 @@ public class CosineSimilarityMatix {
 			stream.forEach(line -> {
 				if (line.isEmpty())
 					return;
-				//lines.add(line);
-				//if (ntypes % 100 ==0)
-				//		System.out.println(ntypes);
-				String[] s = line.split(" ");
-				
-				//if (s.length<3) return;
+				String[] s = line.split(" ", 3);  // RDF triple resources (parts)
+				if(s.length < 3)
+					throw new IllegalArgumentException("The file contains non N3/quad tripple: " + line);
+				String obj = s[2];
+				if(obj.startsWith("\"")) {
+					int iend = obj.indexOf('"', 1) + 1;
+					iend = obj.indexOf(' ', iend);
+					if(iend != -1)
+						s[2] = obj = obj.substring(0, iend);
+				} else s[2] = obj = obj.substring(0, obj.indexOf('>', 1) + 1);
+
 				boolean isType = false;  // Type property
-				if (s[1].contains(CosineSimilarityMatix.typeProperty))
+				final String  prop = s[1];
+				if (prop.contains(CosineSimilarityMatix.typeProperty))
 					isType = true;
 				
 				final String instance = s[0];
@@ -232,17 +312,17 @@ public class CosineSimilarityMatix {
 				}
 				if(!isType) {
 					// Consider only the specified properties
-					if(props != null && !props.contains(s[1]))
+					if(props != null && !props.contains(prop))
 						return;
 					if(propstat.properties == null)
 						propstat.properties = new ArrayList<String>();
 					// Update all props and get the property from the existing object
-					accnames.accept(s[1], allprops, propstat.properties);
+					accnames.accept(prop, allprops, propstat.properties);
 				} else {
 					if(propstat.types == null)
 						propstat.types = new ArrayList<String>();
 					// Consider concrete types (objects)
-					accnames.accept(s[2], alltypes, propstat.types);
+					accnames.accept(prop, alltypes, propstat.types);
 				}
 			});
 		}
