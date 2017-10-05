@@ -220,19 +220,21 @@ public class Statix {
 				ArrayList<PropertyOccurrences>  props = propsocrs.entrySet().stream()
 					.map(entry -> new PropertyOccurrences(entry.getKey(), entry.getValue()))
 					.collect(Collectors.toCollection(ArrayList::new));
-				// Sort properties by the desc weight (asc occurrences)
-				props.sort((p1, p2) -> p1.occurrences-p2.occurrences);
+				// Sort properties by the acs weight (desc occurrences)
+				props.sort((p1, p2) -> p2.occurrences-p1.occurrences);
 				// Check whether the hints are required for this dataset by comparing
 				// the tail following the median VS head of sqrt(size)
 				final int  imed = props.size()/2;
-				final double  tailWeight = props.subList(imed, props.size()).stream().mapToDouble(p -> 1./p.occurrences).sum();
+				final double power = 0.618;  // 0.618 = 1/rgolden;  Range: 0.6 - 0.9;  0.786 = sqrt(1/rgolden)
+				final long  tailOcr = props.subList(imed, props.size()).stream().mapToLong(p
+					-> Math.round(Math.pow(p.occurrences, power))).sum();  // 0.618 - golden ratio
 				final int  eheadMax = (int)Math.round(Math.sqrt(props.size())) + 1;
 				int  iehead = 0;  // End index of the head
-				double  headWeight = 0;
+				long  headOcr = 0;
 
 				// Evaluate head weight and size
-				for(; iehead < eheadMax && headWeight < tailWeight; ++iehead)
-					headWeight += 1./props.get(iehead).occurrences;
+				for(; iehead < eheadMax && headOcr < tailOcr; ++iehead)
+					headOcr += Math.round(Math.pow(props.get(iehead).occurrences, power));
 				++iehead;  // Include the last evaluated item
 				
 				// Check for the first significant weight drop if any
@@ -247,9 +249,9 @@ public class Statix {
 				
 				// Trace the indexes
 				System.out.println("Head size: " + iewdrop + " (head: " + iehead + ", properties: " + props.size()
-					+ "; head weight: " + headWeight + ", tail weight: " + tailWeight + ")");
+					+ "; head occurrences sum: " + headOcr + ", tail occurrences sum: " + tailOcr + ")");
 				System.out.println("Properties weights: ");
-				props.stream().limit(tracingOn ? props.size() : iewdrop - 1).forEach(pocr -> {
+				props.stream().limit(tracingOn ? props.size() : iewdrop).forEach(pocr -> {
 					//System.out.print("  " + pocr.property +  ": " + pocr.occurrences);
 					System.out.print(" " + (float)Math.sqrt(1./pocr.occurrences));
 				});
