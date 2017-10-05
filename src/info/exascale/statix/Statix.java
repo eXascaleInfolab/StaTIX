@@ -17,8 +17,32 @@ import info.exascale.daoc.*;
 
 
 public class Statix {
+
+	//! Round value respecting the specified granularity (1/range)
+	//!
+	//! @param val  - the value to be rounded
+	//! @param range  - granularity range, 0 means skip rounding
+	//! @return  - rounded value
+	static double round(double val, int range) {
+		if(val < 0 || val > 1 || range < 0)
+			throw new IllegalArgumentException("The val or range is invalid, val: " + val + ", range: " + range);
+		if(range == 0)
+			return val;
+		// N delimiters split n+1 bands, where first and last bands are spans
+		// Rounding requires (N - 1) delimeters to produce value in range N
+		return 1./(range + 1) + (val - Math.IEEEremainder(val, 1./(range - 1))) * (range - 1)/(range + 1);
+	}
+	
 	static {
 		System.loadLibrary("daoc");
+		
+		//Console  cons = System.console();
+		//// cnh: %g, round(-0.25, 2)
+		//cons.printf("ch: %g, cf: %g, cfh: %g, 0.85 range 2: %g\n"
+		//	, round(0.25, 2), round(0.5, 2), round(0.75, 2), round(0.85, 2));
+		//cons.printf("0: %g, 0.5: %g, 1: %g  range 3\n"
+		//	, round(0, 3), round(0.5, 3), round(1, 3));
+		//System.exit(1);
 	}
 	
 	public static final String  extHints = ".ipl";  // Default extension of the hints file (indicativity of the property per line)
@@ -47,17 +71,17 @@ public class Statix {
 	//! @param propsWeights  - updating property weights
 	//! @param hdprops  - head properties view
 	//! @param hints  - file name containing indicativity hints of the properties
-	protected void askHints(HashMap<String, Float> propsWeights, String[] hdprops, String hints) throws IOException {
+	//! @return  - the number of specified hints
+	protected int askHints(HashMap<String, Float> propsWeights, String[] hdprops, String hints) throws IOException {
 		Console  cons = System.console();
 		if(cons == null)
 			throw new IOException("System console is not available");
 		// Read the number of marks / evalaution granularity
 		final int  marksDfl = 10;
-		String  marks = cons.readLine("Input evaluation range for each property, natural number >= 2 [%d]: ", marksDfl);
+		String  marks = cons.readLine("Input evaluation range for each property, natural number >= 2 or 0 to input probabilities [%d]: ", marksDfl);
 		final int  nmarks = marks != null ? Integer.parseInt(marks): marksDfl;
-		if(nmarks < 2)
+		if(nmarks != 0 && nmarks < 2)
 			throw new IllegalArgumentException("The number of marks is too small: " + nmarks);
-		final float eps = 0.5f/nmarks;  // Input accuracy
 		
 		//char skip = '';
 	
@@ -82,29 +106,35 @@ public class Statix {
 				continue;
 			} else {
 				// Convert the input significance value to the probability
-				final int  mark = Integer.parseInt(val);
-				if(mark <= 0 || mark > nmarks) {
-					System.err.println("WARNING, the specified property significance is out of the range 1 .. " + nmarks + ": " + mark + ". Correct the specified value.");
-					continue;  // Reinput againg
-				}
-				pweights.put(hdprops[i], eps + (float)(mark - 1) / nmarks);
+				float  weight = 0;  // Property weight
+				if(nmarks != 0) {
+					final int  mark = Integer.parseInt(val);
+					if(mark <= 0 || mark > nmarks) {
+						System.err.println("WARNING, the specified property significance is out of the range 1 .. " + nmarks + ": " + mark + ". Correct the specified value.");
+						continue;  // Reinput againg
+					}
+					weight = (float)round((double)(mark-1)/(nmarks-1), nmarks);
+				} else weight = Float.parseFloat(val);
+				pweights.put(hdprops[i], weight);
 			}
 			++i;
 		}
-		cons.printf("Supervision completed: %d properties are evalauted and %d skipped of %d candidates\n", i - skips, skips, hdprops.length);
+		cons.printf("Supervision completed: %d brief hints are specified, %d skipped for %d properties\n"
+			, pweights.size(), skips, hdprops.length);
 		
 		String  hintsName = updateFileExtension(hints, "_" + nmarks + extHints);
-		// Note: the weights are updated considering eps
-		saveHints(pweights, (double)eps, hintsName);
+		// Note: the weights are updated considering eps by this function
+		saveHints(pweights, nmarks, hintsName);
 		propsWeights.putAll(pweights);
+		return pweights.size();
 	}
 	
 	//! Save properties weights (hints) to the specified file
 	//!
 	//! @param propsWeights  - saving properties weights
-	//! @param eps  - eps of the required indicativity precision
+	//! @param range  - granulatiry of the saving weights (1/range), 0 to skip rounding
 	//! @param hints  - file name containing indicativity hints of the properties
-	protected void saveHints(HashMap<String, Float> propsWeights, double eps, String hints) throws IOException {
+	protected void saveHints(HashMap<String, Float> propsWeights, int range, String hints) throws IOException {
 		if(propsWeights.isEmpty()) {
 			System.err.println("WARNING, the hints output is omitted: propsWeights are empty");
 			return;
@@ -115,9 +145,7 @@ public class Statix {
 			writer.write("#/ Properties: " + propsWeights.size() + "\n");
 			propsWeights.replaceAll((prop, weight) -> {
 				try {
-					if(eps > 0)
-						weight += (float)Math.IEEEremainder((double)weight, eps);
-					writer.write(weight + '\t' + prop + '\n');
+					writer.write((float)round((double)weight, range) + "\t" + prop + "\n");
 				} catch(IOException err) {
 					throw new UncheckedIOException(err);
 				}
@@ -126,15 +154,18 @@ public class Statix {
 		} catch(UncheckedIOException err) {
 			throw new IOException(err);
 		}
-		System.out.println(propsWeights.size() + " property weights (significance) are saved to the: " + hints);
+		System.out.println(propsWeights.size() + " property weights (significance) with eps="
+			+ 0.5f/(range+1) + " are saved to the: " + hints);
 	}
 	
 	//! Load hints from the specified file
 	//!
 	//! @param propsWeights  - updating property weights
 	//! @param hints  - file name containing indicativity hints of the properties
-	protected void loadHints(HashMap<String, Float> propsWeights, String hints) throws IOException {
+	//! @return  - the number of loaded hints
+	protected int loadHints(HashMap<String, Float> propsWeights, String hints) throws IOException {
 		final Pattern  witespace = Pattern.compile("\\s");  // Note: JAVA requires additional quoting or Pattern.quote("\s")
+		final ValWrapper<Integer>  num = new ValWrapper<Integer>(0);
 		try(Stream<String> stream = Files.lines(Paths.get(hints))) {
 			stream.forEach(line -> {
 				String[]  parts = witespace.split(line, 2);
@@ -146,8 +177,10 @@ public class Statix {
 					return;
 				}
 				propsWeights.put(parts[1], Float.parseFloat(parts[0]));
+				++num.val;
 			});
 		}
+		return num.val;
 	}
 
 	static class PropertyOccurrences {
@@ -182,12 +215,13 @@ public class Statix {
 
 		// Apply the hints for the property weights if any
 		if(hints != null) {
+			int  nhints = 0;
 			if(hints.startsWith("-")) {
 				ArrayList<PropertyOccurrences>  props = propsocrs.entrySet().stream()
 					.map(entry -> new PropertyOccurrences(entry.getKey(), entry.getValue()))
 					.collect(Collectors.toCollection(ArrayList::new));
-				// Sort properties by the decreasing occurrances
-				props.sort((p1, p2) -> p2.occurrences-p1.occurrences);
+				// Sort properties by the desc weight (asc occurrences)
+				props.sort((p1, p2) -> p1.occurrences-p2.occurrences);
 				// Check whether the hints are required for this dataset by comparing
 				// the tail following the median VS head of sqrt(size)
 				final int  imed = props.size()/2;
@@ -212,7 +246,14 @@ public class Statix {
 				}
 				
 				// Trace the indexes
-				System.out.println("Head size: " + iewdrop + " (from " + iehead + " of " + props.size());
+				System.out.println("Head size: " + iewdrop + " (head: " + iehead + ", properties: " + props.size()
+					+ "; head weight: " + headWeight + ", tail weight: " + tailWeight + ")");
+				System.out.println("Properties weights: ");
+				props.stream().limit(tracingOn ? props.size() : iewdrop - 1).forEach(pocr -> {
+					//System.out.print("  " + pocr.property +  ": " + pocr.occurrences);
+					System.out.print(" " + (float)Math.sqrt(1./pocr.occurrences));
+				});
+				System.out.println();
 				// Reduce the properties to be supervised
 				iehead = iewdrop;
 				props.subList(iehead, props.size()).clear();
@@ -222,14 +263,13 @@ public class Statix {
 					if(hints == "--") {
 						// Note: Strings are immutable in Java
 						String  hintsName = updateFileExtension(n3DataSet, extHints);
-						// Note: the weights are updated considering eps
-						askHints(propsWeights, props.stream().map(psocrs -> psocrs.property).toArray(String[]::new), hintsName);
+						// Note: the weights are updated considering required granularity
+						nhints = askHints(propsWeights, props.stream().map(psocrs -> psocrs.property).toArray(String[]::new), hintsName);
 					} else {
 						String nopts = hints.substring(1);  // The number of marks (options)
-						final int optsNum = Integer.parseInt(nopts);
-						if(optsNum <= 0)
+						final int optsNum = nopts.isEmpty() ? 0 : Integer.parseInt(nopts);
+						if(optsNum != 0 && optsNum <= 0)
 							throw new IllegalArgumentException("The number of marks is too small");
-						final double eps = nopts.isEmpty() ? 0 : 1. / (2 * optsNum);
 						
 						String ext = extHints;
 						if(!nopts.isEmpty())
@@ -241,14 +281,17 @@ public class Statix {
 							targProps.put(psocrs.property, psocrs.occurrences);
 						});
 						props = null;
+						
 						csmat.loadGtData(n3DataSet, targProps);
+						// Note: the weights are updated considering required granularity
+						saveHints(csmat.propsWeights, optsNum, hintsName);
 						// Update propsWeights with the supervised weights of targProps
 						propsWeights.putAll(csmat.propsWeights);
-						// Note: the weights are updated considering eps
-						saveHints(propsWeights, eps, hintsName);
+						nhints = csmat.propsWeights.size();
 					}
 				} else System.err.println("WARNING, the 'brief hints' are omitted because the property weights distribution is not the heavy tailed in " + n3DataSet);
-			} else loadHints(propsWeights, hints);
+			} else nhints = loadHints(propsWeights, hints);
+			System.out.println("The number of applied brief hints: " + nhints);
 		}
 
 		if(tracingOn)

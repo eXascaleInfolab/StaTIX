@@ -10,6 +10,15 @@ import java.nio.file.Files;
 import java.util.*;
 
 
+class ValWrapper<Val> {
+	public Val  val;
+	
+	public ValWrapper(Val val) {
+		this.val = val;
+	}
+}
+
+
 class InstanceProperties {
 	public int id;  //!< Instance (subject) id
 	public boolean isTyped = false;  //!< The instance is typped
@@ -32,6 +41,7 @@ class InstanceProperties {
 		this.id=id;
 	}
 }
+
 
 public class CosineSimilarityMatix {
 	public static final String  typeProperty = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
@@ -242,14 +252,6 @@ public class CosineSimilarityMatix {
 	// Cut negative numbers to zero
 	private static int cutneg(int a) {
 		return a >= 0 ? a : 0;
-	}
-
-	static class ValWrapper<Val> {
-		public Val  val;
-		
-		public ValWrapper(Val val) {
-			this.val = val;
-		}
 	}
 
 	static class TypeStat {
