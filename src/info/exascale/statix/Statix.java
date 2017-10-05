@@ -133,7 +133,8 @@ public class Statix {
 	
 	//! Save properties weights (hints) to the specified file
 	//!
-	//! @param propsWeights  - saving properties weights. ATTENTION: too small weights can be removed instead of being saved
+	//! @param propsWeights  - saving properties weights
+	//! 	ATTENTION: too small weights can be removed instead of being saved if it improves the accuracy
 	//! @param range  - granulatiry of the saving weights (1/range), 0 to skip rounding
 	//! @param hints  - file name containing indicativity hints of the properties
 	protected void saveHints(HashMap<String, Float> propsWeights, int range, String hints) throws IOException {
