@@ -113,6 +113,8 @@ public class Statix {
 						System.err.println("WARNING, the specified property significance is out of the range 1 .. " + nmarks + ": " + mark + ". Correct the specified value.");
 						continue;  // Reinput againg
 					}
+					// Note: always apply the user specified rounded weight.
+					// The user will skip it's evaluation if the property is absolutely insignificant.
 					weight = (float)round((double)(mark-1)/(nmarks-1), nmarks);
 				} else weight = Float.parseFloat(val);
 				pweights.put(hdprops[i], weight);
@@ -131,7 +133,7 @@ public class Statix {
 	
 	//! Save properties weights (hints) to the specified file
 	//!
-	//! @param propsWeights  - saving properties weights
+	//! @param propsWeights  - saving properties weights. ATTENTION: too small weights can be removed instead of being saved
 	//! @param range  - granulatiry of the saving weights (1/range), 0 to skip rounding
 	//! @param hints  - file name containing indicativity hints of the properties
 	protected void saveHints(HashMap<String, Float> propsWeights, int range, String hints) throws IOException {
@@ -142,15 +144,26 @@ public class Statix {
 		
 		try(BufferedWriter  writer = Files.newBufferedWriter(Paths.get(hints))) {
 			// Output file header
+			// Note: the actual number of properties can be smaller in case some weight are
+			// too small and being omitted (left initial tiny automatically estimated values)
 			writer.write("#/ Properties: " + propsWeights.size() + "\n");
+			final ArrayList<String>  skips = new ArrayList<String>();  // Omitting weight to be removed from the mapping
 			propsWeights.replaceAll((prop, weight) -> {
+				// Check whether to update and save the rounded weight or just skuip it
+				final float  rweight = (float)round((double)weight, range);  // Update the weight
+				if(weight < rweight - weight) {  // For very small weight it a more accurate solution can be just omission
+					skips.add(prop);
+					return weight;
+				}
+				weight = rweight;
 				try {
-					writer.write((float)round((double)weight, range) + "\t" + prop + "\n");
+					writer.write(weight + "\t" + prop + "\n");
 				} catch(IOException err) {
 					throw new UncheckedIOException(err);
 				}
 				return weight;
 			});
+			skips.forEach(propsWeights::remove);
 		} catch(UncheckedIOException err) {
 			throw new IOException(err);
 		}
