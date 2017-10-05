@@ -225,17 +225,22 @@ public class Statix {
 				// Check whether the hints are required for this dataset by comparing
 				// the tail following the median VS head of sqrt(size)
 				final int  imed = props.size()/2;
-				final double power = 0.618;  // 0.618 = 1/rgolden;  Range: 0.6 - 0.9;  0.786 = sqrt(1/rgolden)
-				final long  tailOcr = props.subList(imed, props.size()).stream().mapToLong(p
+				final double power = 0.786;  // 0.618 = 1/rgolden;  Range: 0.6 - 0.9;  0.786 = sqrt(1/rgolden)
+				long  tailOcr = props.subList(imed, props.size()).stream().mapToLong(p
 					-> Math.round(Math.pow(p.occurrences, power))).sum();  // 0.618 - golden ratio
 				final int  eheadMax = (int)Math.round(Math.sqrt(props.size())) + 1;
 				int  iehead = 0;  // End index of the head
 				long  headOcr = 0;
 
 				// Evaluate head weight and size
-				for(; iehead < eheadMax && headOcr < tailOcr; ++iehead)
-					headOcr += Math.round(Math.pow(props.get(iehead).occurrences, power));
-				++iehead;  // Include the last evaluated item
+				int  itail = imed - 1;
+				while(iehead < eheadMax && iehead < itail) {
+					for(; headOcr < tailOcr && iehead < eheadMax; ++iehead)
+						headOcr += Math.round(Math.pow(props.get(iehead).occurrences, power));
+					for(; tailOcr < headOcr && itail > iehead; --itail);
+						tailOcr += Math.round(Math.pow(props.get(itail).occurrences, power));
+				}
+				++iehead;  // Point to the item following the evaluated one
 				
 				// Check for the first significant weight drop if any
 				int  iewdrop = 0;
@@ -248,8 +253,9 @@ public class Statix {
 				}
 				
 				// Trace the indexes
-				System.out.println("Head size: " + iewdrop + " (head: " + iehead + ", properties: " + props.size()
-					+ "; head occurrences sum: " + headOcr + ", tail occurrences sum: " + tailOcr + ")");
+				System.out.println("Head size: " + iewdrop + " (iehead: " + iehead + ", itail: " + itail
+					+ ", properties: " + props.size() + "; head occurrences sum: " + headOcr
+					+ ", tail occurrences sum: " + tailOcr + ")");
 				System.out.println("Properties weights: ");
 				props.stream().limit(tracingOn ? props.size() : iewdrop).forEach(pocr -> {
 					//System.out.print("  " + pocr.property +  ": " + pocr.occurrences);
