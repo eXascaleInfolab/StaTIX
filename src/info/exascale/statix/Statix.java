@@ -241,7 +241,7 @@ public class Statix {
 				final int  imed = props.size()/2;
 				final double power = 0.786;  // 0.618 = 1/rgolden;  Range: 0.6 - 0.9;  0.786 = sqrt(1/rgolden)
 				long  tailOcr = props.subList(imed, props.size()).stream().mapToLong(p
-					-> Math.round(Math.pow(p.occurrences, power))).sum();  // 0.618 - golden ratio
+					-> Math.round(Math.pow(p.occurrences, power))).sum();
 				final int  eheadMax = (int)Math.round(Math.sqrt(props.size())) + 1;
 				int  iehead = 0;  // End index of the head
 				long  headOcr = 0;
