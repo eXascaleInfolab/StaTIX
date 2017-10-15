@@ -37,6 +37,7 @@ public class main {
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format");
+		options.addOption("c", "clean-extract-gt", true, "Extract ground-truth from the dirty input dataset that may contain duplicates and requires preprocessing.  Ids of the unique subjects per each type are extracted to the specified file in the " + Statix.extCls + " format");
 		options.addOption("v", "version", false, "Show version");
 		
 		HelpFormatter formatter = new HelpFormatter();
@@ -80,11 +81,12 @@ public class main {
 				throw new IllegalArgumentException("A single input dataset is expected with optimal parameters");
 			
 			// Check for the GT extraction
-			if(cmd.hasOption("e")) {
+			if(cmd.hasOption("e") || cmd.hasOption("c")) {
+				final boolean clean = cmd.hasOption("c");
 				String idMapFName = null;
 				if(cmd.hasOption("n"))
 					idMapFName = cmd.getOptionValue("n");				
-				CosineSimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName);
+				CosineSimilarityMatix.extractGT(files[0], cmd.getOptionValue(clean ? "c" : "e"), idMapFName, clean);
 				System.exit(0);
 			}
 

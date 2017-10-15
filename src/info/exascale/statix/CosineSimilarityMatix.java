@@ -76,7 +76,8 @@ public class CosineSimilarityMatix {
 	//! @param n3DataSet  - input dataset with labeled types
 	//! @param clsFName  - output clusters in the .cnl format
 	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
-	public static void extractGT(String n3DataSet, String clsFName, String idMapFName) throws IOException {
+	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
+	public static void extractGT(String n3DataSet, String clsFName, String idMapFName, boolean dirty) throws IOException {
 		TreeMap<String, Integer> instances = new TreeMap<String, Integer>();
 		TreeMap<String, ArrayList<Integer>> typesInstances = new TreeMap<String, ArrayList<Integer>>();
 
@@ -120,7 +121,12 @@ public class CosineSimilarityMatix {
 					}
 					if(id == idNone)
 						id = instances.get(inst);
-					iids.add(id);
+					if(!iids.isEmpty() && dirty) {
+						int pos = Collections.binarySearch(iids, id);
+						// Omit duplicated types (#type values) in the entities, add only new types
+						if(pos < 0)
+							iids.add(-pos - 1, id);
+					} else iids.add(id);
 				}
 			}
 			
