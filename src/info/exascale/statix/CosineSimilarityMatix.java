@@ -131,7 +131,7 @@ public class CosineSimilarityMatix {
 				} else id = idNone;
 
 				// Check for the type property
-				if(s[1] == typeProperty) {
+				if(typeProperty.equals(s[1])) {
 					final String obj = s[2];
 					ArrayList<Integer> iids = typesInstances.get(obj);
 					if(iids == null) {
@@ -205,7 +205,7 @@ public class CosineSimilarityMatix {
 						idmapf.write(id + "\t" + inst + "\n");
 				}
 				// Do not add #type property
-				if(property == typeProperty) {
+				if(typeProperty.equals(property)) {
 					instanceProperties.isTyped = true;
 					continue;
 				}
@@ -244,7 +244,7 @@ public class CosineSimilarityMatix {
 			//System.out.println("mask= "+mask);
 
 			this.instsProps.values().forEach(instps -> {
-				if (instps.isTyped == false) {
+				if (!instps.isTyped) {
 					//instProps.id = -((int) instProps.id);  // Note: causes issues if id is not int32_t
 					instps.id = instps.id | mask;
 					// Trace resulting id
@@ -311,7 +311,7 @@ public class CosineSimilarityMatix {
 					instsSProps.put(instance, propstat);
 				}
 				final String obj = s[2];
-				if(prop != typeProperty) {
+				if(!typeProperty.equals(prop)) {
 					// Consider only the specified properties
 					if(props != null && !props.contains(obj))
 						return;

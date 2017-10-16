@@ -93,7 +93,7 @@ public class main {
 
 			// Check for the filtering option
 			// ATTENTION: should be done before the input datasets reading
-			boolean filteringOn = cmd.hasOption("f");
+			final boolean filteringOn = cmd.hasOption("f");
 			if(cmd.hasOption("n"))
 				idMapFName = cmd.getOptionValue("n");
 				
