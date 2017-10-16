@@ -74,8 +74,12 @@ public class CosineSimilarityMatix {
 	//! Parse triple in N3/quad format
 	//! 
 	//! @param line  - the line of text to be parsed as a triple
-	//! @return - array of triple (s, p, o), the provenance is omitted if any
+	//! @return - array of triple (s, p, o) or null, the provenance is omitted if any.
+	//! 	null is returned if the line is a comment
 	public static String[] parseTriple(String line) {
+		// Consider comments, and empty lines (at least in the end of the file)
+		if(line.isEmpty() || line.startsWith("#"))
+			return null;
 		String[] s = line.split(" ", 3);  // RDF triple resources (parts)
 		// See RDF triple format details: https://www.w3.org/TR/2004/REC-rdf-concepts-20040210/#section-triples
 		if(s.length < 3)
@@ -118,9 +122,9 @@ public class CosineSimilarityMatix {
 			final int  idNone = -1;
 			String  line = null;
 			while((line = bufferedReader.readLine()) != null) {
-				if (line.isEmpty())
+				final String[] s = parseTriple(line);
+				if(s == null)
 					continue;
-				String[] s = parseTriple(line);
 				final String inst = s[0];
 				int id = instances.size();
 				if(!instances.containsKey(inst)) {
@@ -188,9 +192,9 @@ public class CosineSimilarityMatix {
 		) {   
 			String  line = null;
 			while ((line = bufferedReader.readLine()) != null) {
-				if (line.isEmpty())
+				final String[] s = parseTriple(line);
+				if(s == null)
 					continue;
-				String[] s = parseTriple(line);
 				final String inst = s[0];
 				final int id = instProps.size();
 				final String property = s[1];
@@ -300,9 +304,9 @@ public class CosineSimilarityMatix {
 		
 		try(Stream<String> stream = Files.lines(Paths.get(n3DataSet))) {
 			stream.forEach(line -> {
-				if (line.isEmpty())
+				final String[] s = parseTriple(line);
+				if(s == null)
 					return;
-				String[] s = parseTriple(line);
 				final String prop = s[1];
 				final String instance = s[0];
 				InstPropsStat propstat = instsSProps.get(instance);
