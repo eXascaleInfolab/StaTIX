@@ -351,10 +351,10 @@ public class CosineSimilarityMatix {
 		String  type;
 		int  propocr;
 		
-		TypePropOcr(String typename, int propocr) {
-			this.type = typename;
-			this.propocr = propocr;
-		}
+		//TypePropOcr(String typename, int propocr) {
+		//	this.type = typename;
+		//	this.propocr = propocr;
+		//}
 		
 		TypePropOcr(String typename) {
 			this.type = typename;
@@ -404,8 +404,10 @@ public class CosineSimilarityMatix {
 					// Add new types to the property
 					for(String tname: propstat.types) {
 						int pos = Collections.binarySearch(ptocrs, tname);
-						if(pos >= 0)
+						if(pos >= 0) {
+							++ptocrs.get(pos).propocr;
 							continue;  // Such type already present
+						}
 						// New item
 						pos = -pos - 1;
 						ptocrs.add(pos, new TypePropOcr(tname));
