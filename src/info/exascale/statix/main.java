@@ -37,7 +37,7 @@ public class main {
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
 		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format");
-		options.addOption("u", "unique-triples", false, "Unique triples only are present in the dataset (natty, clean data without duplicates), so there is no need of handling and omission of the possible duplicates");
+		options.addOption("u", "unique-triples", false, "Unique triples only are present in the ground-truth dataset (natty, clean data without duplicates), so there is no need of the possible duplicates identification and omission");
 		options.addOption("v", "version", false, "Show version");
 		
 		HelpFormatter formatter = new HelpFormatter();
@@ -100,7 +100,7 @@ public class main {
 			if(cmd.hasOption("g")) {
 				String gtDataset = cmd.getOptionValue("g");
 				//System.out.println("Ground-truth file= "+gtDataset);
-				statix.loadDatasets(files[0], gtDataset, filteringOn, idMapFName);
+				statix.loadDatasets(files[0], gtDataset, filteringOn, idMapFName, dirty);
 			}
 			else {
 				String hints = cmd.hasOption("b") ? cmd.getOptionValue("b") : null;
@@ -123,7 +123,7 @@ public class main {
 					if(hints != "--" && hints.length() >= 2 && Integer.parseInt(hints.substring(1)) <= 1)
 						throw new IllegalArgumentException("The number of marks is too small");
 				}
-				statix.loadDataset(files[0], filteringOn, idMapFName, hints);
+				statix.loadDataset(files[0], filteringOn, idMapFName, hints, dirty);
 			}
 
 			// Set output file

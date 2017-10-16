@@ -53,11 +53,11 @@ public class CosineSimilarityMatix {
 	public CosineSimilarityMatix()  {}
 
 	// Output id mapping if required (idMapFName != null)
-	public CosineSimilarityMatix(String inpfname, String lblfname, String idMapFName) throws IOException {
+	public CosineSimilarityMatix(String inpfname, String lblfname, String idMapFName, boolean dirty) throws IOException {
 		HashMap<String, Integer>  propsocrs = loadInputData(inpfname, false, idMapFName);
-		loadGtData(lblfname, propsocrs);
+		loadGtData(lblfname, propsocrs, dirty);
 	}
-	
+
 	//! Unique entity instances (subjects)
 	public Set<String> instances()  { return instsProps != null ? instsProps.keySet() : null; }
 	
@@ -65,10 +65,39 @@ public class CosineSimilarityMatix {
 	public int instanceId(String instance)  { return instsProps.get(instance).id; }
 	
 	// Output id mapping if required (idMapFName != null)
-	public double[][] cosineSimilarity(String inpfname, String lblfname, String idMapFName) throws IOException {
+	public double[][] cosineSimilarity(String inpfname, String lblfname, String idMapFName, boolean dirty) throws IOException {
 		HashMap<String, Integer>  propsocrs = loadInputData(inpfname, false, idMapFName);
-		loadGtData(lblfname, propsocrs);
+		loadGtData(lblfname, propsocrs, dirty);
 		return symmetricMatrixProgram();
+	}
+	
+	//! Parse triple in N3/quad format
+	//! 
+	//! @param line  - the line of text to be parsed as a triple
+	//! @return - array of triple (s, p, o), the provenance is omitted if any
+	public static String[] parseTriple(String line) {
+		String[] s = line.split(" ", 3);  // RDF triple resources (parts)
+		// See RDF triple format details: https://www.w3.org/TR/2004/REC-rdf-concepts-20040210/#section-triples
+		if(s.length < 3)
+			throw new IllegalArgumentException("The file contains non N3/quad triple: " + line);
+		// The object is either literal or URI
+		final String obj = s[2];
+		if(obj.startsWith("\"")) {
+			// Note: string can be a prefix for the URL,provenance separated from the object by the space symbol
+			// The well-formed triples also have space before the terminating '.'
+			final int iend = obj.indexOf('"', 1) + 1;
+			if(iend != 0)
+				s[2] = obj.substring(0, iend);
+			// Omit the trailing '.' even in case of the malformed triple lacking the space before the ending '.'
+			else if(!obj.isEmpty() && obj.charAt(obj.length() - 1) == '.')
+				s[2] = obj.substring(0, obj.length());
+		} else {
+			final int iend = obj.indexOf('>', 1) + 1;
+			if(iend == 0)
+				throw new IllegalArgumentException("The triple is invalid, an URI is expected as an object: " + line);
+			s[2] = obj.substring(0, iend);
+		}
+		return s;
 	}
 
 	//! Extract ground truth cluster members (sunbjects ids of types)
@@ -85,24 +114,13 @@ public class CosineSimilarityMatix {
 			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
 			BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
 			BufferedWriter  clsf = Files.newBufferedWriter(Paths.get(clsFName));
-		) {    
+		) {
 			final int  idNone = -1;
 			String  line = null;
 			while((line = bufferedReader.readLine()) != null) {
 				if (line.isEmpty())
 					continue;
-				String[] s = line.split(" ", 3);  // RDF triple resources (parts)
-				// See RDF triple format details: https://www.w3.org/TR/2004/REC-rdf-concepts-20040210/#section-triples
-				if(s.length < 3)
-					throw new IllegalArgumentException("The file contains non N3/quad tripple: " + line);
-				String obj = s[2];
-				if(obj.startsWith("\"")) {
-					int iend = obj.indexOf('"', 1) + 1;
-					iend = obj.indexOf(' ', iend);
-					if(iend != -1)
-						s[2] = obj = obj.substring(0, iend);
-				} else s[2] = obj = obj.substring(0, obj.indexOf('>', 1) + 1);
-
+				String[] s = parseTriple(line);
 				final String inst = s[0];
 				int id = instances.size();
 				if(!instances.containsKey(inst)) {
@@ -113,7 +131,8 @@ public class CosineSimilarityMatix {
 				} else id = idNone;
 
 				// Check for the type property
-				if(s[1].contains(typeProperty)) {
+				if(s[1] == typeProperty) {
+					final String obj = s[2];
 					ArrayList<Integer> iids = typesInstances.get(obj);
 					if(iids == null) {
 						iids = new ArrayList<Integer>();
@@ -171,21 +190,10 @@ public class CosineSimilarityMatix {
 			while ((line = bufferedReader.readLine()) != null) {
 				if (line.isEmpty())
 					continue;
-				String[] s = line.split(" ", 3);  // RDF triple resources (parts)
-				if(s.length < 3)
-					throw new IllegalArgumentException("The file contains non N3/quad tripple: " + line);
-				String obj = s[2];
-				if(obj.startsWith("\"")) {
-					int iend = obj.indexOf('"', 1) + 1;
-					iend = obj.indexOf(' ', iend);
-					if(iend != -1)
-						s[2] = obj = obj.substring(0, iend);
-				} else s[2] = obj = obj.substring(0, obj.indexOf('>', 1) + 1);
-					
+				String[] s = parseTriple(line);
 				final String inst = s[0];
 				final int id = instProps.size();
 				final String property = s[1];
-				final boolean isTyped = property.contains(typeProperty);
 				InstanceProperties instanceProperties = instProps.get(inst);
 
 				if (instanceProperties == null) {
@@ -197,7 +205,7 @@ public class CosineSimilarityMatix {
 						idmapf.write(id + "\t" + inst + "\n");
 				}
 				// Do not add #type property
-				if (isTyped) {
+				if(property == typeProperty) {
 					instanceProperties.isTyped = true;
 					continue;
 				}
@@ -269,7 +277,8 @@ public class CosineSimilarityMatix {
 	//!
 	//! @param n3DataSet  - RDF dataset in N3/quad format containing the type information
 	//! @param props  - target properties to be accunted, null means all available properties
-	private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3DataSet, Set<String> props) throws IOException {
+	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
+	private static TreeMap<String, InstPropsStat> loadInstanceProperties(String n3DataSet, Set<String> props, final boolean dirty) throws IOException {
 		// instanceName, i.e. subject: InstPropsStat
 		TreeMap<String, InstPropsStat>  instsSProps = new TreeMap<String, InstPropsStat>();
 		TreeSet<String>  allprops = new TreeSet<String>();  // All properties of the second dataset
@@ -279,56 +288,42 @@ public class CosineSimilarityMatix {
 		TriConsumer<String, TreeSet<String>, ArrayList<String>> accnames = (name, allnames, names) -> {
 			if(!allnames.add(name))
 				name = allnames.tailSet(name).first();
-			int pos = 0;
-			if(!names.isEmpty()) {
-				pos = Collections.binarySearch(names, name);
-				if(pos >= 0)  // The item is present already
+			if(dirty && !names.isEmpty()) {
+				int pos = Collections.binarySearch(names, name);
+				if(pos >= 0)  // The item is already present
 					return;
 				// New item
 				pos = -pos - 1;
-			}
-			names.add(pos, name);
+				names.add(pos, name);
+			} else names.add(name);
 		};
 		
 		try(Stream<String> stream = Files.lines(Paths.get(n3DataSet))) {
 			stream.forEach(line -> {
 				if (line.isEmpty())
 					return;
-				String[] s = line.split(" ", 3);  // RDF triple resources (parts)
-				if(s.length < 3)
-					throw new IllegalArgumentException("The file contains non N3/quad tripple: " + line);
-				String obj = s[2];
-				if(obj.startsWith("\"")) {
-					int iend = obj.indexOf('"', 1) + 1;
-					iend = obj.indexOf(' ', iend);
-					if(iend != -1)
-						s[2] = obj = obj.substring(0, iend);
-				} else s[2] = obj = obj.substring(0, obj.indexOf('>', 1) + 1);
-
-				boolean isType = false;  // Type property
-				final String  prop = s[1];
-				if (prop.contains(CosineSimilarityMatix.typeProperty))
-					isType = true;
-				
+				String[] s = parseTriple(line);
+				final String prop = s[1];
 				final String instance = s[0];
 				InstPropsStat propstat = instsSProps.get(instance);
 				if (propstat == null) {
 					propstat = new InstPropsStat();
 					instsSProps.put(instance, propstat);
 				}
-				if(!isType) {
+				final String obj = s[2];
+				if(prop != typeProperty) {
 					// Consider only the specified properties
-					if(props != null && !props.contains(prop))
+					if(props != null && !props.contains(obj))
 						return;
 					if(propstat.properties == null)
 						propstat.properties = new ArrayList<String>();
 					// Update all props and get the property from the existing object
-					accnames.accept(prop, allprops, propstat.properties);
+					accnames.accept(obj, allprops, propstat.properties);
 				} else {
 					if(propstat.types == null)
 						propstat.types = new ArrayList<String>();
 					// Consider concrete types (objects)
-					accnames.accept(prop, alltypes, propstat.types);
+					accnames.accept(obj, alltypes, propstat.types);
 				}
 			});
 		}
@@ -370,11 +365,12 @@ public class CosineSimilarityMatix {
 	//!
 	//! @param n3DataSet  - RDF dataset in N3/quad format containing the type information
 	//! @param propsocrs  - properties and their occurrences from the input dataset, whose weight should be evalauted
-	//! @param purePropStat  - evaluate instances statistics for all or only for the specified properties
-	public void loadGtData(String n3DataSet, HashMap<String, Integer> propsocrs, final boolean purePropStat) throws IOException {
+	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
+	//! @param purePropStat  - evaluate instances statistics only for the input or for all properties in GT
+	public void loadGtData(String n3DataSet, HashMap<String, Integer> propsocrs, final boolean dirty, final boolean purePropStat) throws IOException {
 		// Instance (subject): InstPropsStat
 		// Note: properties.keySet() has sense to supply only for the huge GT datasets like DBPedia, not for the prelabled samples
-		TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet, purePropStat ? propsocrs.keySet() : null);  // != null ? targProps : properties.keySet());
+		TreeMap<String, InstPropsStat> instPStats = loadInstanceProperties(n3DataSet, purePropStat ? propsocrs.keySet() : null, dirty);  // != null ? targProps : properties.keySet());
 		// The estimated number of types is square root of the number of properties
 		// Note: this hasmap will be resized is resizable, so use load factor < 1
 		final HashMap<String, TypeStat>  typesStats = new HashMap<String, TypeStat>((int)Math.sqrt(propsocrs.size()), 0.85f);
@@ -395,9 +391,8 @@ public class CosineSimilarityMatix {
 			//propstat.types.trimToSize();
 			for(String propname: propstat.properties) {
 				// Skip non-target properties
-				if(!purePropStat && !propsTypes.containsKey(propname))
+				if(purePropStat && !propsTypes.containsKey(propname))
 					continue;
-				assert propsTypes.containsKey(propname): "The property should be present in the input dataset";
 				// Types are ordered by the type name.
 				ArrayList<TypePropOcr>  ptocrs = propsTypes.get(propname);
 				if(ptocrs != null) {
@@ -500,8 +495,8 @@ public class CosineSimilarityMatix {
 		this.propsWeights = propertiesWeights;
 	}
 
-	public void loadGtData(String n3DataSet, HashMap<String, Integer> propsocrs) throws IOException {
-		loadGtData(n3DataSet, propsocrs, true);
+	public void loadGtData(String n3DataSet, HashMap<String, Integer> propsocrs, boolean dirty) throws IOException {
+		loadGtData(n3DataSet, propsocrs, dirty, true);
 	}
 
 	//*********************************************Calculating Cosin Similarity****************************************************************

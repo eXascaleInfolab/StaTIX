@@ -213,7 +213,7 @@ public class Statix {
 	}
 	
 	//In case that only input file is givven to the app (without Ground-TRuth dataset)all the property weights will be set = 1
-	public void loadDataset(String n3DataSet, boolean filteringOn, String idMapFName, String hints) throws IOException {
+	public void loadDataset(String n3DataSet, boolean filteringOn, String idMapFName, String hints, boolean dirty) throws IOException {
 		HashMap<String, Integer>  propsocrs = csmat.loadInputData(n3DataSet, filteringOn, idMapFName);
 		
 		if(propsocrs.isEmpty()) {
@@ -304,7 +304,7 @@ public class Statix {
 						});
 						props = null;
 						
-						csmat.loadGtData(n3DataSet, targProps);
+						csmat.loadGtData(n3DataSet, targProps, dirty);
 						// Note: the weights are updated considering required granularity
 						saveHints(csmat.propsWeights, optsNum, hintsName);
 						// Update propsWeights with the supervised weights of targProps
@@ -331,9 +331,10 @@ public class Statix {
 	//! @param filteringOn  - filter out non-typed instances from the output by inverting their ids,
 	//! 	useful for the benchmarking working with ground-truth files
 	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
-	public void loadDatasets(String inpfname, String lblfname, boolean filteringOn, String idMapFName) throws Exception {
+	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
+	public void loadDatasets(String inpfname, String lblfname, boolean filteringOn, String idMapFName, boolean dirty) throws Exception {
 		HashMap<String, Integer>  propsocrs = csmat.loadInputData(inpfname, filteringOn, idMapFName);
-		csmat.loadGtData(lblfname, propsocrs);
+		csmat.loadGtData(lblfname, propsocrs, dirty);
 	}
 
 	protected Graph buildGraph() {
