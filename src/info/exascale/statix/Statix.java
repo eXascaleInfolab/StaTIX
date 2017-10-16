@@ -254,30 +254,35 @@ public class Statix {
 					for(; tailOcr < headOcr && itail > iehead; --itail);
 						tailOcr += Math.round(Math.pow(props.get(itail).occurrences, power));
 				}
+				// Trim equal items in the end to be deterministic
+				while(iehead >= 0 && props.get(iehead).occurrences == props.get(iehead + 1).occurrences)
+					--iehead;
 				++iehead;  // Point to the item following the evaluated one
 				
-				// Check for the first significant weight drop if any
-				int  iewdrop = 0;
-				int  ocrlast = props.get(iewdrop++).occurrences;  // The number of property occurrences
-				for(; iewdrop < iehead; ++iewdrop) {
-					int ocr = props.get(iewdrop).occurrences;
-					if((ocrlast - ocr) * 2 >= ocrlast)
-						break;
-					ocrlast = ocr;
-				}
+				//// Check for the first significant weight drop if any
+				//int  iewdrop = 0;
+				//int  ocrlast = props.get(iewdrop++).occurrences;  // The number of property occurrences
+				//for(; iewdrop < iehead; ++iewdrop) {
+				//	int ocr = props.get(iewdrop).occurrences;
+				//	if((ocrlast - ocr) * 2 >= ocrlast)
+				//		break;
+				//	ocrlast = ocr;
+				//}
 				
-				// Trace the indexes
-				System.out.println("Head size: " + iewdrop + " (iehead: " + iehead + ", itail: " + itail
+				// Trace the indices
+				//System.out.println("Head size: " + iewdrop + " (iehead: " + iehead + ", itail: " + itail
+				System.out.println("Head size: " + iehead + ", itail: " + itail
 					+ ", properties: " + props.size() + "; head occurrences sum: " + headOcr
-					+ ", tail occurrences sum: " + tailOcr + ")");
+					+ ", tail occurrences sum: " + tailOcr + "; eheadMax: " + eheadMax);
 				System.out.println("Properties weights: ");
-				props.stream().limit(tracingOn ? props.size() : iewdrop).forEach(pocr -> {
+				props.stream().limit(tracingOn ? props.size() : iehead //iewdrop
+				).forEach(pocr -> {
 					//System.out.print("  " + pocr.property +  ": " + pocr.occurrences);
 					System.out.print(" " + (float)Math.sqrt(1./pocr.occurrences));
 				});
 				System.out.println();
 				// Reduce the properties to be supervised
-				iehead = iewdrop;
+				//iehead = iewdrop;
 				props.subList(iehead, props.size()).clear();
 				props.trimToSize();
 				
