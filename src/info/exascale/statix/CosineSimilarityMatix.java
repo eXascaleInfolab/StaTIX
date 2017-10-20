@@ -504,58 +504,63 @@ public class CosineSimilarityMatix {
 	}
 
 	//*********************************************Calculating Cosin Similarity****************************************************************
-	 public double similarity(String instance1, String instance2) {
-			if (instance1 == instance2)
+	//! Evaluate similatity between the instances
+	//! Cosine similarity is evaluated, sim(a, a) = 1, but typically does not used in the clusteing
+	//! @param instance1  - first instance
+	//! @param instancew  - second instance
+	//! @return consine similarity
+	public double similarity(String instance1, String instance2) {
+		if (instance1 == instance2)
+			return 1;
+		double inst1TotWeight = 0;
+		double inst2TotWeight = 0;
+		double powerCommon =0;
+
+		TreeSet<String> instance1Properties = instsProps.get(instance1).properties;
+		TreeSet<String> instance2Properties = instsProps.get(instance2).properties;
+		if (instance1Properties.size() > instance2Properties.size()) {
+			TreeSet<String> tempTreeSet = instance1Properties;
+			instance1Properties = instance2Properties;
+			instance2Properties = tempTreeSet;
+		}
+		
+		if(instance1Properties.isEmpty() || instance2Properties.isEmpty()) {
+			if(instance1Properties.isEmpty() && instance2Properties.isEmpty())
 				return 1;
-			double inst1TotWeight = 0;
-			double inst2TotWeight = 0;
-			double powerCommon =0;
+			return 0;
+		}
 
-			TreeSet<String> instance1Properties = instsProps.get(instance1).properties;
-			TreeSet<String> instance2Properties = instsProps.get(instance2).properties;
-			if (instance1Properties.size() > instance2Properties.size()) {
-				TreeSet<String> tempTreeSet = instance1Properties;
-				instance1Properties = instance2Properties;
-				instance2Properties = tempTreeSet;
-			}
-			
-			if(instance1Properties.isEmpty() || instance2Properties.isEmpty()) {
-				if(instance1Properties.isEmpty() && instance2Properties.isEmpty())
-					return 1;
-				return 0;
-			}
+		for(String prop1: instance1Properties) {
+			double weight = (double)propsWeights.getOrDefault(prop1, 0.f);
+			if(weight == 0)
+				continue;
+			weight *= weight;
+			inst1TotWeight += weight;
+			if(instance2Properties.contains(prop1))
+				powerCommon += weight;
+		}
+		inst1TotWeight = Math.sqrt(inst1TotWeight);
 
-			for(String prop1: instance1Properties) {
-				double weight = (double)propsWeights.getOrDefault(prop1, 0.f);
-				if(weight == 0)
-					continue;
-				weight *= weight;
-				inst1TotWeight += weight;
-				if(instance2Properties.contains(prop1))
-					powerCommon += weight;
-			}
-			inst1TotWeight = Math.sqrt(inst1TotWeight);
+		for(String prop2: instance2Properties) {
+			double weight = (double)propsWeights.getOrDefault(prop2, 0.f);
+			if(weight == 0)
+				continue;
+			weight *= weight;
+			inst2TotWeight += weight;
+		}
+		inst2TotWeight = Math.sqrt(inst2TotWeight);
+		//   System.out.print(powerlist);
+		final double similarity = powerCommon / (inst1TotWeight * inst2TotWeight);
 
-			for(String prop2: instance2Properties) {
-				double weight = (double)propsWeights.getOrDefault(prop2, 0.f);
-				if(weight == 0)
-					continue;
-				weight *= weight;
-				inst2TotWeight += weight;
-			}
-			inst2TotWeight = Math.sqrt(inst2TotWeight);
-			//   System.out.print(powerlist);
-			final double similarity = powerCommon / (inst1TotWeight * inst2TotWeight);
-
-			//  System.out.println("Results: "+instance1+" "+instance2+" "+powerCommon+" /{ "+instance1TotalWeight1+" * "+instance1TotalWeight2+" } ");
-			//if(tracingOn) {
-			//	FileWriter fw = new FileWriter("./outputfile.txt");
-			//	BufferedWriter output = new BufferedWriter(fw);
-			//	output.write( "Results: "+instance1+" "+instance2+" "+powerCommon+" /{ "+instance1TotalWeight1+" * "+instance1TotalWeight2+" } ");
-			//	output.flush();
-			//}
-			return similarity;
-	 }
+		//  System.out.println("Results: "+instance1+" "+instance2+" "+powerCommon+" /{ "+instance1TotalWeight1+" * "+instance1TotalWeight2+" } ");
+		//if(tracingOn) {
+		//	FileWriter fw = new FileWriter("./outputfile.txt");
+		//	BufferedWriter output = new BufferedWriter(fw);
+		//	output.write( "Results: "+instance1+" "+instance2+" "+powerCommon+" /{ "+instance1TotalWeight1+" * "+instance1TotalWeight2+" } ");
+		//	output.flush();
+		//}
+		return similarity;
+	}
 
 
 	public double[][] symmetricMatrixProgram() {

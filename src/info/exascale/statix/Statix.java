@@ -355,7 +355,7 @@ public class Statix {
 			final long  sid = csmat.instanceId(inst1);  // Source node id
 			int j = 0;
 			for (String inst2: instances) {
-				if(j > i) {
+				if(j > i) {  // Skip back links
 					final float  weight = (float)csmat.similarity(inst1, inst2);
 					if(weight == 0)
 						continue;
