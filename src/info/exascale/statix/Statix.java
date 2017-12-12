@@ -385,7 +385,8 @@ public class Statix {
 		csmat = null;
 		OutputOptions outpopts = new OutputOptions();
 		final short outpflag = (short)(multiLev
-			? 0x4A  // SIMPLE | SIGNIFICANT  (0xA - SIGNIF_OWNSHIER, 0xB - SIGNIF_OWNAHIER)
+			//? 0x4A  // SIMPLE | SIGNIFICANT  (0xA - SIGNIF_OWNSHIER, 0xB - SIGNIF_OWNAHIER, 0x9 - SIGNIF_OWNADIR)
+			? 0x49  // SIMPLE | SIGNIF_OWNADIR (0x8 - SIGNIF_OWNSDIR, 0x9 - SIGNIF_OWNADIR)
 			// ? 0x43  // SIMPLE | CUSTLEVS  // Note: CUSTLEVS respect clsrstep
 			//? 0x45  // SIMPLE | ALLCLS
 			: 0x41);  // SIMPLE | ROOT
@@ -394,9 +395,17 @@ public class Statix {
 		// Set SignifclsOptions if required
 		if(multiLev) {
 			SignifclsExtoptions sgnopts = new SignifclsExtoptions();
-			sgnopts.setDensdrop(0.9f);
-			sgnopts.setWrstep(0.95f);
-			sgnopts.setSzmin(0);  // 2
+			// Max density drop to not be filtered-out from the output
+			if((outpflag & 0xF) >= 0xA) {
+				//sgnopts.setDensdrop(0.9f);  // Kenza-based datasets ONMI:  1 OK, 0.9 better, 0.75 better, 0.5 [w 0.9] - sometimes worse, 0.1 [w 0.85] - worse for the former full match
+				// Min weight drop to not be filtered-out from the output
+				//sgnopts.setWrstep(0.85f);  // 0.95f [d 1-0.75], 0.9 [d 0.5]  - Skip too similar clusters
+				final float  dropRatio = (float) Math.exp(-2);
+				sgnopts.setDensdrop(1 - dropRatio);
+				sgnopts.setWrstep(dropRatio);
+				sgnopts.setWrange(true);
+				sgnopts.setSzmin(0);  // 2
+			}
 			outpopts.setSignifcls(sgnopts);
 		}
 		
