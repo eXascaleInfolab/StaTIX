@@ -420,15 +420,16 @@ public class Statix {
 		ClusterOptions  cops = new ClusterOptions();
 		cops.setGamma(scale);
 		short rdcpolicy = 0;  // NONE
+		// CRITERIA_WEIGHT = 0x80  - to use reduction by weight instead of the optimization function
 		switch(reduction) {
 		case 'a':
-			rdcpolicy = (short)0x1;  // ACCURATE
+			rdcpolicy = (short)0x81;  // ACCURATE
 			break;
 		case 'm':
-			rdcpolicy = (short)0x2;  // MEAN
+			rdcpolicy = (short)0x82;  // MEAN
 			break;
 		case 's':
-			rdcpolicy = (short)0x3;  // SEVERE
+			rdcpolicy = (short)0x83;  // SEVERE
 			break;
 		}
 		cops.setReduction(daoc.toReduction(rdcpolicy));
