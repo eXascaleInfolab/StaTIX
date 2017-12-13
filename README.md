@@ -37,51 +37,66 @@ Accuracy of the StaTIX type inference (see details in [TInfES](https://github.co
 Usage: ./run.sh [OPTIONS...] <inputfile.rdf>
 Statistical type inference in fully automatic and semi supervised modes
 Options:
- -b,--brief-hints <arg>    Brief hits, possible values:
-                           '--'  - interactive hints
-                           '<filename.ipl>'  - read from the file having
-                           the format for each line:
-                           <indicativity> <property>
-                           where indicativity E [0, 1]; 0 - the property
-                           has no any impact on the entity type, 1 - the
-                           property fully specifies the entity type, line
-                           comments starting with '#' are allowed.
-                           '-[<nopts=INF>]'  - automatic generation of the
-                           hints to the <inpfile_marks.ipl>, where <marks>
-                           is the range of marks (>= 2) on supervision,
-                           which defines the indicativity precision
-                           eps=1/(marks*2): eps=0.167 for 3 marks
- -f,--filter               Filter out from the resulting clusters all
-                           subjects that do not have #type property in the
-                           input dataset, used for the type inference
-                           evaluation
- -g,--ground-truth <arg>   The ground-truth sample (subset of the input
-                           dataset or another similar dataset with the
-                           specified type properties)
- -h,--help                 Show usage
- -m,--multi-level          Output type inference for multiple scales
-                           (representative clusters from all hierarchy
-                           levels) besides the macro scale (top level,
-                           root)
- -n,--id-name <arg>        Output map of the id names (<inpfile>.idm in
-                           tab separated format: <id>
-                           <subject_name>), default: disabled
- -o,--output <arg>         Output file, default: <inpfile>.cnl
- -r,--reduce <arg>         Reduce similarity matrix on graph construction
-                           by non-significant relations to reduce memory
-                           consumption and speedup the clustering.
-                           Options: a - accurate, m - mean, s - severe.
-                           Recommended for large datasets
- -s,--scale <arg>          Scale (resolution, gamma parameter of the
-                           clustering), -1 is automatic scale inference
-                           for each cluster, >=0 is the forced static
-                           scale (<=1 for the macro clustering); default:
-                           -1
- -v,--version              Show version
+ -b,--brief-hints <arg>           Brief hits, possible values:
+                                  '--'  - interactive hints
+                                  '<filename.ipl>'  - read from the file
+                                  having the format for each line:
+                                  <indicativity> <property>
+                                  where indicativity E [0, 1]; 0 - the
+                                  property has no any impact on the entity
+                                  type, 1 - the property fully specifies
+                                  the entity type, line comments starting
+                                  with '#' are allowed.
+                                  '-[<nopts=INF>]'  - automatic generation
+                                  of the hints to the <inpfile_marks.ipl>,
+                                  where <marks> is the range of marks (>=
+                                  2) on supervision, which defines the
+                                  indicativity precision eps=0.5/(marks +
+                                  1): eps=0.167 for 2 marks
+ -e,--extract-groundtruth <arg>   Extract ground-truth (ids of the
+                                  subjects per each type) to the specified
+                                  file in the .cnl format
+ -g,--groundtruth-sample <arg>    The ground-truth sample (subset of the
+                                  input dataset or another similar dataset
+                                  with the specified type properties)
+ -h,--help                        Show usage
+ -i,--network <arg>               Produce .rcg input network file for the
+                                  clustering without the type inference
+                                  itself
+ -m,--multi-level                 Output type inference for multiple
+                                  scales (representative clusters from all
+                                  hierarchy levels) besides the macro
+                                  scale (top level, root)
+ -n,--id-name <arg>               Output map of the id names
+                                  (<inpfile>.idm in tab separated format:
+                                  <id> <subject_name>), default: disabled
+ -o,--output <arg>                Output file, default: <inpfile>.cnl
+ -p,--filter                      Filter out from the resulting clusters
+                                  all subjects that do not have the
+                                  '#type' property in the input dataset,
+                                  used for the type inference evaluation
+ -r,--reduce <arg>                Reduce similarity matrix on graph
+                                  construction by non-significant
+                                  relations to reduce memory consumption
+                                  and speedup the clustering. Options: a -
+                                  accurate, m - mean, s - severe.
+                                  Recommended for large datasets
+ -s,--scale <arg>                 Scale (resolution, gamma parameter of
+                                  the clustering), -1 is automatic scale
+                                  inference for each cluster, >=0 is the
+                                  forced static scale (<=1 for the macro
+                                  clustering); default: -1
+ -u,--unique-triples              Unique triples only are present in the
+                                  ground-truth dataset (natty, clean data
+                                  without duplicates), so there is no need
+                                  of the possible duplicates
+                                  identification and omission
+ -v,--version                     Show version
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  
-To infer types on multiple resolution levels (besides the whole dataset scope): `./run.sh -a inpDataset.rdf`.
+To infer types on multiple resolution levels (besides the whole dataset scope): `./run.sh -a inpDataset.rdf`.  
+To produce the input network in the [.rcg format](https://github.com/eXascaleInfolab/PyNetConvert#rcg) for the clustering without the type inference itself: `$ ./run.sh -f -p networks/gendr-f.rcg datasets/biomedical/gendr.rdf`.
 
 ### Compilation
 

@@ -47,6 +47,7 @@ public class Statix {
 	
 	public static final String  extHints = ".ipl";  // Default extension of the hints file (indicativity of the property per line)
 	public static final String  extCls = ".cnl";  // Default extension of the clusters (inferred types) file (indicativity of the property per line)
+	public static final String  extNet = ".rcg";  // Default extension for the network (clustering input) file
 	
 	private static final boolean  tracingOn = false;  // Enable tracing
 	private CosineSimilarityMatix  csmat = new CosineSimilarityMatix();
@@ -344,9 +345,9 @@ public class Statix {
 
 	protected Graph buildGraph() {
 		final Set<String>  instances = csmat.instances();
-		final int instsNum = instances.size();
-		Graph gr = new Graph(instsNum);
-		InpLinks grInpLinks  = new InpLinks();
+		final int  instsNum = instances.size();
+		Graph  gr = new Graph(instsNum);
+		InpLinks  grInpLinks = new InpLinks();
 
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
 		// so even for the symmetric matrix all iterations should be done
@@ -376,6 +377,48 @@ public class Statix {
 
 		System.err.println("The input graph is formed");
 		return gr;
+	}
+	
+	public void saveNet(String outputPath) throws IOException {
+		try(
+			BufferedWriter  netf = Files.newBufferedWriter(Paths.get(outputPath));  // new BufferedWriter(new FileWriter(idMapFName))
+		) {
+			final Set<String>  instances = csmat.instances();
+			final int  instsNum = instances.size();
+
+			// Write .rcg header
+			netf.write("/Graph weighted:1 validated:1\n/Nodes " + instsNum + "\n/Edges\n");
+
+			// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
+			// so even for the symmetric matrix all iterations should be done
+			int i = 0;
+			for (String inst1: instances) {
+				final long  sid = csmat.instanceId(inst1);  // Source node id
+				boolean  initial = true;  // First item in the line
+				int  j = 0;
+				for (String inst2: instances) {
+					if(j > i) {  // Skip back links
+						if(initial) {
+							initial = false;
+							netf.write(sid + ">");
+						}
+						final float  weight = (float)csmat.similarity(inst1, inst2);
+						if(weight == 0)
+							continue;
+						final long did = csmat.instanceId(inst2);
+						//System.out.print(" " + did + ":" + weight);
+						//if(weight <= 0 || Float.isNaN(weight))
+						//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
+						netf.write(" " + did + ":" + weight);
+					}
+					++j;
+				}
+				if(!initial)
+					netf.write("\n");
+				++i;
+			}
+			System.err.println("The network is saved into: " + outputPath);
+		}
 	}
 	
 	public void cluster(String outputPath, float scale, boolean multiLev, char reduction, boolean filteringOn) throws Exception {

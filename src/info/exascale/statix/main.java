@@ -3,6 +3,8 @@ package info.exascale.statix;
 import java.text.ParseException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.io.IOException;
+import java.io.File;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -35,14 +37,18 @@ public class main {
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
-		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have #type property in the input dataset, used for the type inference evaluation");
+		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have the '#type' property in the input dataset, used for the type inference evaluation");
 		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format");
 		options.addOption("u", "unique-triples", false, "Unique triples only are present in the ground-truth dataset (natty, clean data without duplicates), so there is no need of the possible duplicates identification and omission");
+		options.addOption("p", "network", true, "Produce .rcg input network file for the clustering without the type inference itself");
 		options.addOption("v", "version", false, "Show version");
 		
 		HelpFormatter formatter = new HelpFormatter();
 		String[] argsOpt = new String[]{"args"};
-		final String appusage = main.class.getCanonicalName() + " [OPTIONS...] <inputfile.rdf>";
+		final String appusage = //main.class.getCanonicalName()
+			//new File(main.class.getProtectionDomain().getCodeSource()
+			//.getLocation().getPath()).getName() +
+			"./run.sh [OPTIONS...] <inputfile.rdf>";
 		final String desription = "Statistical type inference in fully automatic and semi supervised modes\nOptions:";
 		final String reference = "\nSee details in https://github.com/eXascaleInfolab/StaTIX";
 		Statix  statix = new Statix();
@@ -154,8 +160,18 @@ public class main {
 				}
 			}
 			
-			// Perform type inference
-			statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn);
+			if(cmd.hasOption("p")) {
+				// Construct and output the input network for the subsequent clustering without the type inference itself
+				final String  netfile = cmd.getOptionValue("p");
+				try {
+					statix.saveNet(netfile);
+				} catch(IOException e) {
+					System.err.println("ERROR on saving to the network file (" + netfile + "):\n");
+					e.printStackTrace();
+					System.exit(1);
+				}
+			} else  // Perform type inference
+				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn);
 		}
 		catch (ParseException e) {  //  | IllegalArgumentException
 			e.printStackTrace();
