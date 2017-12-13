@@ -393,23 +393,23 @@ public class Statix {
 			// so even for the symmetric matrix all iterations should be done
 			int i = 0;
 			for (String inst1: instances) {
-				final long  sid = csmat.instanceId(inst1);  // Source node id
+				final int  sid = csmat.instanceId(inst1);  // Source node id
 				boolean  initial = true;  // First item in the line
 				int  j = 0;
 				for (String inst2: instances) {
 					if(j > i) {  // Skip back links
 						if(initial) {
 							initial = false;
-							netf.write(sid + ">");
+							netf.write(Integer.toUnsignedString(sid) + ">");
 						}
 						final float  weight = (float)csmat.similarity(inst1, inst2);
 						if(weight == 0)
 							continue;
-						final long did = csmat.instanceId(inst2);
+						final int  did = csmat.instanceId(inst2);
 						//System.out.print(" " + did + ":" + weight);
 						//if(weight <= 0 || Float.isNaN(weight))
 						//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
-						netf.write(" " + did + ":" + weight);
+						netf.write(" " + Integer.toUnsignedString(did) + ":" + weight);
 					}
 					++j;
 				}
@@ -417,7 +417,7 @@ public class Statix {
 					netf.write("\n");
 				++i;
 			}
-			System.err.println("The network is saved into: " + outputPath);
+			System.err.println("The network is saved to: " + outputPath);
 		}
 	}
 	
