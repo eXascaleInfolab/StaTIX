@@ -50,7 +50,7 @@ public class Statix {
 	public static final String  extNet = ".rcg";  // Default extension for the network (clustering input) file
 	
 	private static final boolean  tracingOn = false;  // Enable tracing
-	private CosineSimilarityMatix  csmat = new CosineSimilarityMatix();
+	private SimilarityMatix  csmat = new SimilarityMatix();
 	
 	
 	public static String daocRevision()  { return daoc.libBuild().rev(); }
@@ -346,8 +346,9 @@ public class Statix {
 	//! Build the graph to be clustered
 	//!
 	//! @param weighnode  - weigh nodes (node self-weight) besides their links
+	//! @param jaccard  - use (weighted) Jaccard instead of the Cosine similarity
 	//! @return the input graph for the clustering
-	protected Graph buildGraph(final boolean weighnode) {
+	protected Graph buildGraph(final boolean weighnode, final boolean jaccard) {
 		final Set<String>  instances = csmat.instances();
 		final int  instsNum = instances.size();
 		Graph  gr = new Graph(instsNum);
@@ -361,7 +362,7 @@ public class Statix {
 			int j = 0;
 			for (String inst2: instances) {
 				if(j++ > i) {  // Skip back links (which should have the same weight anyway) and the self-link
-					final float  weight = (float)csmat.similarity(inst1, inst2);
+					final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
 					if(weight == 0)
 						continue;
 					final long did = csmat.instanceId(inst2);
@@ -373,8 +374,13 @@ public class Statix {
 				}
 			}
 			// Add the self-link if required (threated as an edge, i.e. doubled internally)
-			if(weighnode)
-				grInpLinks.add(new InpLink(sid, (float)csmat.similarity(inst1, inst1)));  // Note: Typically 1
+			if(weighnode) {
+				// Note: Typically the self-weight is 1
+				final float  weight = (float)csmat.similarity(inst1, inst1, jaccard);
+				if(weight == 0)
+					continue;
+				grInpLinks.add(new InpLink(sid, weight));
+			}
 			//System.out.println();
 			gr.addNodeAndEdges(sid,grInpLinks);
 			grInpLinks.clear();
@@ -385,7 +391,12 @@ public class Statix {
 		return gr;
 	}
 	
-	public void saveNet(String outputPath) throws IOException {
+	//! Save the clustering input network to the specified file
+	//!
+	//! @param outputPath  - the network file name
+	//! @param weighnode  - weigh nodes (node self-weight) besides their links
+	//! @param jaccard  - use (weighted) Jaccard instead of the Cosine similarity
+	public void saveNet(String outputPath, final boolean weighnode, final boolean jaccard) throws IOException {
 		try(
 			BufferedWriter  netf = Files.newBufferedWriter(Paths.get(outputPath));  // new BufferedWriter(new FileWriter(idMapFName))
 		) {
@@ -408,7 +419,7 @@ public class Statix {
 							initial = false;
 							netf.write(Integer.toUnsignedString(sid) + ">");
 						}
-						final float  weight = (float)csmat.similarity(inst1, inst2);
+						final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
 						if(weight == 0)
 							continue;
 						final int  did = csmat.instanceId(inst2);
@@ -419,6 +430,18 @@ public class Statix {
 					}
 					++j;
 				}
+				// Add the self-link if required (threated as an edge, i.e. doubled internally)
+				if(weighnode) {
+					// Note: Typically the self-weight is 1
+					final float  weight = (float)csmat.similarity(inst1, inst1, jaccard);
+					if(weight == 0)
+						continue;
+					if(initial) {
+						initial = false;
+						netf.write(Integer.toUnsignedString(sid) + ">");
+					}
+					netf.write(" " + Integer.toUnsignedString(sid) + ":" + weight);
+				}
 				if(!initial)
 					netf.write("\n");
 				++i;
@@ -427,9 +450,9 @@ public class Statix {
 		}
 	}
 	
-	public void cluster(String outputPath, float scale, boolean multiLev, char reduction, boolean filteringOn, boolean weighnode) throws Exception {
+	public void cluster(String outputPath, float scale, boolean multiLev, char reduction, boolean filteringOn, boolean weighnode, boolean jaccard) throws Exception {
 		System.err.println("Calling the clustering lib...");
-		Graph gr = buildGraph(weighnode);
+		Graph gr = buildGraph(weighnode, jaccard);
 		// Cosin similarity matrix is not required any more, release it
 		csmat = null;
 		OutputOptions outpopts = new OutputOptions();

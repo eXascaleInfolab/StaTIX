@@ -43,17 +43,17 @@ class InstanceProperties {
 }
 
 
-public class CosineSimilarityMatix {
+public class SimilarityMatix {
 	public static final String  typeProperty = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 	public HashMap<String, Float>  propsWeights = null;  // Used in similarity evaluation
 	private HashMap<String, InstanceProperties>  instsProps = null;  // Instance Properties statistics, required to build the input graph for the clustering
 	private int  propsocrs = 0;  // Total number of occurrences of all properties in the input datasets (the number of triples)
 
 
-	public CosineSimilarityMatix()  {}
+	public SimilarityMatix()  {}
 
 	// Output id mapping if required (idMapFName != null)
-	public CosineSimilarityMatix(String inpfname, String lblfname, String idMapFName, boolean dirty) throws IOException {
+	public SimilarityMatix(String inpfname, String lblfname, String idMapFName, boolean dirty) throws IOException {
 		HashMap<String, Integer>  propsocrs = loadInputData(inpfname, false, idMapFName);
 		loadGtData(lblfname, propsocrs, dirty);
 	}
@@ -68,7 +68,7 @@ public class CosineSimilarityMatix {
 	public double[][] cosineSimilarity(String inpfname, String lblfname, String idMapFName, boolean dirty) throws IOException {
 		HashMap<String, Integer>  propsocrs = loadInputData(inpfname, false, idMapFName);
 		loadGtData(lblfname, propsocrs, dirty);
-		return symmetricMatrixProgram();
+		return symmetricMatrixProgram(false);
 	}
 	
 	//! Parse triple in N3/quad format
@@ -505,11 +505,12 @@ public class CosineSimilarityMatix {
 
 	//*********************************************Calculating Cosin Similarity****************************************************************
 	//! Evaluate similatity between the instances
-	//! Cosine similarity is evaluated, sim(a, a) = 1, but typically does not used in the clusteing
+	//! @note sim(a, a) = 1, but typically does not used in the clustering
 	//! @param instance1  - first instance
-	//! @param instancew  - second instance
+	//! @param instance2  - second instance
+	//! @param jaccard  - evaluate (weighted) Jaccard instead of the Cosine similarity
 	//! @return consine similarity
-	public double similarity(String instance1, String instance2) {
+	public double similarity(String instance1, String instance2, final boolean jaccard) {
 		if (instance1 == instance2)
 			return 1;
 		double inst1TotWeight = 0;
@@ -529,7 +530,30 @@ public class CosineSimilarityMatix {
 				return 1;
 			return 0;
 		}
+		
+		if(jaccard) {
+			// Weighted Jaccard similarity
+			for(String prop1: instance1Properties) {
+				double weight = (double)propsWeights.getOrDefault(prop1, 0.f);
+				if(weight == 0)
+					continue;
+				inst1TotWeight += weight;
+				if(instance2Properties.contains(prop1))
+					powerCommon += weight;
+			}
 
+			for(String prop2: instance2Properties) {
+				double weight = (double)propsWeights.getOrDefault(prop2, 0.f);
+				if(weight == 0)
+					continue;
+				inst2TotWeight += weight;
+			}
+			//   System.out.print(powerlist);
+
+			return powerCommon / (inst1TotWeight + inst2TotWeight);
+		}
+
+		// Weighted Cosine similarity
 		for(String prop1: instance1Properties) {
 			double weight = (double)propsWeights.getOrDefault(prop1, 0.f);
 			if(weight == 0)
@@ -550,7 +574,6 @@ public class CosineSimilarityMatix {
 		}
 		inst2TotWeight = Math.sqrt(inst2TotWeight);
 		//   System.out.print(powerlist);
-		final double similarity = powerCommon / (inst1TotWeight * inst2TotWeight);
 
 		//  System.out.println("Results: "+instance1+" "+instance2+" "+powerCommon+" /{ "+instance1TotalWeight1+" * "+instance1TotalWeight2+" } ");
 		//if(tracingOn) {
@@ -559,11 +582,11 @@ public class CosineSimilarityMatix {
 		//	output.write( "Results: "+instance1+" "+instance2+" "+powerCommon+" /{ "+instance1TotalWeight1+" * "+instance1TotalWeight2+" } ");
 		//	output.flush();
 		//}
-		return similarity;
+		return powerCommon / (inst1TotWeight * inst2TotWeight);
 	}
 
 
-	public double[][] symmetricMatrixProgram() {
+	public double[][] symmetricMatrixProgram(final boolean jaccard) {
 		Set<String> instances = instsProps.keySet();
 		final int n = instances.size();
 		double matrix[][] = new double[n][n];
@@ -575,7 +598,7 @@ public class CosineSimilarityMatix {
 		for (String inst1: instances) {
 			for (String inst2: instances) {
 				if(j > i) {
-					matrix[i][j] = similarity(inst1, inst2);
+					matrix[i][j] = similarity(inst1, inst2, jaccard);
 					//if(tracingOn)
 					//	System.out.print(matrix[i][j] + " ");
 				} else if (j < i)

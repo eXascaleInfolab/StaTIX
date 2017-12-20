@@ -39,6 +39,7 @@ public class main {
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have the '#type' property in the input dataset, used for the type inference evaluation");
 		options.addOption("w", "weigh-instance", false, "Weight RDF instances (subjects) or use only the weighted relations between the instances");
+		options.addOption("j", "jaccard-similarity", false, "Use (weighted) Jaccard instead of the Cosine similarity");
 		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format");
 		options.addOption("u", "unique-triples", false, "Unique triples only are present in the ground-truth dataset (natty, clean data without duplicates), so there is no need of the possible duplicates identification and omission");
 		options.addOption("p", "network", true, "Produce .rcg input network file for the clustering without the type inference itself");
@@ -94,7 +95,7 @@ public class main {
 			if(cmd.hasOption("e")) {
 				if(cmd.hasOption("n"))
 					idMapFName = cmd.getOptionValue("n");				
-				CosineSimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName, dirty);
+				SimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName, dirty);
 				System.exit(0);
 			}
 
@@ -161,18 +162,20 @@ public class main {
 				}
 			}
 			
+			final boolean weighnode = cmd.hasOption("w");
+			final boolean jaccard = cmd.hasOption("j");
 			if(cmd.hasOption("p")) {
 				// Construct and output the input network for the subsequent clustering without the type inference itself
 				final String  netfile = cmd.getOptionValue("p");
 				try {
-					statix.saveNet(netfile);
+					statix.saveNet(netfile, weighnode, jaccard);
 				} catch(IOException e) {
 					System.err.println("ERROR on saving to the network file (" + netfile + "):\n");
 					e.printStackTrace();
 					System.exit(1);
 				}
 			} else  // Perform type inference
-				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn, cmd.hasOption("w"));
+				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn, weighnode, jaccard);
 		}
 		catch (ParseException e) {  //  | IllegalArgumentException
 			e.printStackTrace();
