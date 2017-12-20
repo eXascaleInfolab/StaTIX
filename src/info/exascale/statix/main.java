@@ -36,7 +36,7 @@ public class main {
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id> <subject_name>), default: disabled");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
-		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
+		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering (recommended for large datasets). Options X[Y]; X: a - accurate, m - mean, s - severe; Y: o - use optimization function for the links reduction (default), w - reduce links by their raw weight. Examples: -r m, -r mw");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have the '#type' property in the input dataset, used for the type inference evaluation");
 		options.addOption("w", "weigh-instance", false, "Weight RDF instances (subjects) or use only the weighted relations between the instances");
 		options.addOption("j", "jaccard-similarity", false, "Use (weighted) Jaccard instead of the Cosine similarity");
@@ -153,12 +153,15 @@ public class main {
 			}
 			// Reduction policy
 			char reduction = 'n';  // None
+			boolean  reduceByWeight = false;
 			if(cmd.hasOption("r")) {
 				String val = cmd.getOptionValue("r");
 				if(!val.isEmpty()) {
-					if(val.length() >= 2 || "ams".indexOf(val.charAt(0)) == -1)
+					if(val.length() >= 3 || "ams".indexOf(val.charAt(0)) == -1
+					|| (val.length() == 2 && "ow".indexOf(val.charAt(1)) == -1))
 						throw new IllegalArgumentException("The reduction parameter is out of the expected range");
 					reduction = val.charAt(0);
+					reduceByWeight = val.length() == 2 && val.charAt(1) == 'w';
 				}
 			}
 			
@@ -175,7 +178,7 @@ public class main {
 					System.exit(1);
 				}
 			} else  // Perform type inference
-				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn, weighnode, jaccard);
+				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, reduceByWeight, filteringOn, weighnode, jaccard);
 		}
 		catch (ParseException e) {  //  | IllegalArgumentException
 			e.printStackTrace();
