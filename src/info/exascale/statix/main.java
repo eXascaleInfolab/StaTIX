@@ -38,6 +38,7 @@ public class main {
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering. Options: a - accurate, m - mean, s - severe. Recommended for large datasets");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have the '#type' property in the input dataset, used for the type inference evaluation");
+		options.addOption("w", "weigh-instance", false, "Weight RDF instances (subjects) or use only the weighted relations between the instances");
 		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format");
 		options.addOption("u", "unique-triples", false, "Unique triples only are present in the ground-truth dataset (natty, clean data without duplicates), so there is no need of the possible duplicates identification and omission");
 		options.addOption("p", "network", true, "Produce .rcg input network file for the clustering without the type inference itself");
@@ -171,7 +172,7 @@ public class main {
 					System.exit(1);
 				}
 			} else  // Perform type inference
-				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn);
+				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, filteringOn, cmd.hasOption("w"));
 		}
 		catch (ParseException e) {  //  | IllegalArgumentException
 			e.printStackTrace();

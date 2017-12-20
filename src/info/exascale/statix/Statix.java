@@ -343,7 +343,11 @@ public class Statix {
 		csmat.loadGtData(lblfname, propsocrs, dirty);
 	}
 
-	protected Graph buildGraph() {
+	//! Build the graph to be clustered
+	//!
+	//! @param weighnode  - weigh nodes (node self-weight) besides their links
+	//! @return the input graph for the clustering
+	protected Graph buildGraph(final boolean weighnode) {
 		final Set<String>  instances = csmat.instances();
 		final int  instsNum = instances.size();
 		Graph  gr = new Graph(instsNum);
@@ -356,7 +360,7 @@ public class Statix {
 			final long  sid = csmat.instanceId(inst1);  // Source node id
 			int j = 0;
 			for (String inst2: instances) {
-				if(j > i) {  // Skip back links
+				if(j++ > i) {  // Skip back links (which should have the same weight anyway) and the self-link
 					final float  weight = (float)csmat.similarity(inst1, inst2);
 					if(weight == 0)
 						continue;
@@ -367,8 +371,10 @@ public class Statix {
 
 					grInpLinks.add(new InpLink(did, weight));
 				}
-				++j;
 			}
+			// Add the self-link if required (threated as an edge, i.e. doubled internally)
+			if(weighnode)
+				grInpLinks.add(new InpLink(sid, (float)csmat.similarity(inst1, inst1)));  // Note: Typically 1
 			//System.out.println();
 			gr.addNodeAndEdges(sid,grInpLinks);
 			grInpLinks.clear();
@@ -421,9 +427,9 @@ public class Statix {
 		}
 	}
 	
-	public void cluster(String outputPath, float scale, boolean multiLev, char reduction, boolean filteringOn) throws Exception {
+	public void cluster(String outputPath, float scale, boolean multiLev, char reduction, boolean filteringOn, boolean weighnode) throws Exception {
 		System.err.println("Calling the clustering lib...");
-		Graph gr = buildGraph();
+		Graph gr = buildGraph(weighnode);
 		// Cosin similarity matrix is not required any more, release it
 		csmat = null;
 		OutputOptions outpopts = new OutputOptions();
