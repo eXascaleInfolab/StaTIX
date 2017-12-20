@@ -56,13 +56,16 @@ Options:
  -e,--extract-groundtruth <arg>   Extract ground-truth (ids of the
                                   subjects per each type) to the specified
                                   file in the .cnl format
+ -f,--filter                      Filter out from the resulting clusters
+                                  all subjects that do not have the
+                                  '#type' property in the input dataset,
+                                  used for the type inference evaluation
  -g,--groundtruth-sample <arg>    The ground-truth sample (subset of the
                                   input dataset or another similar dataset
                                   with the specified type properties)
  -h,--help                        Show usage
- -i,--network <arg>               Produce .rcg input network file for the
-                                  clustering without the type inference
-                                  itself
+ -j,--jaccard-similarity          Use (weighted) Jaccard instead of the
+                                  Cosine similarity
  -m,--multi-level                 Output type inference for multiple
                                   scales (representative clusters from all
                                   hierarchy levels) besides the macro
@@ -71,16 +74,18 @@ Options:
                                   (<inpfile>.idm in tab separated format:
                                   <id> <subject_name>), default: disabled
  -o,--output <arg>                Output file, default: <inpfile>.cnl
- -p,--filter                      Filter out from the resulting clusters
-                                  all subjects that do not have the
-                                  '#type' property in the input dataset,
-                                  used for the type inference evaluation
+ -p,--network <arg>               Produce .rcg input network file for the
+                                  clustering without the type inference
+                                  itself
  -r,--reduce <arg>                Reduce similarity matrix on graph
                                   construction by non-significant
                                   relations to reduce memory consumption
-                                  and speedup the clustering. Options: a -
-                                  accurate, m - mean, s - severe.
-                                  Recommended for large datasets
+                                  and speedup the clustering (recommended
+                                  for large datasets). Options X[Y]; X: a
+                                  - accurate, m - mean, s - severe; Y: o -
+                                  use optimization function for the links
+                                  reduction (default), w - reduce links by
+                                  their raw weight. Examples: -r m, -r mw
  -s,--scale <arg>                 Scale (resolution, gamma parameter of
                                   the clustering), -1 is automatic scale
                                   inference for each cluster, >=0 is the
@@ -92,6 +97,9 @@ Options:
                                   of the possible duplicates
                                   identification and omission
  -v,--version                     Show version
+ -w,--weigh-instance              Weight RDF instances (subjects) or use
+                                  only the weighted relations between the
+                                  instances
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  
