@@ -505,7 +505,8 @@ public class Statix {
 		}
 		if(reduceByWeight)
 			rdcpolicy |= (short)0x80;  // CRITERIA_WEIGHT, use reduction by weight instead of the optimization function
-		cops.setReduction(daoc.toReduction(rdcpolicy));
+		cops.reductionFromMask(rdcpolicy);
+		//cops.setReduction(daoc.toReduction(rdcpolicy));
 		Hierarchy hr = gr.buildHierarchy(cops);
 		System.err.println("Starting the hierarchy output");
 		hr.output(outpopts);
