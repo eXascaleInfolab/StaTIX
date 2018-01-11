@@ -3,6 +3,7 @@ package info.exascale.statix;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.nio.file.Paths;
@@ -109,14 +110,16 @@ public class SimilarityMatix {
 	//! @param n3DataSet  - input dataset with labeled types
 	//! @param clsFName  - output clusters in the .cnl format
 	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
+	//! @param tpLblFName  - optional cluster labels file name to be formed (label per line format)
 	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
-	public static void extractGT(String n3DataSet, String clsFName, String idMapFName, boolean dirty) throws IOException {
+	public static void extractGT(String n3DataSet, String clsFName, String idMapFName, String tpLblFName, boolean dirty) throws IOException {
 		TreeMap<String, Integer> instances = new TreeMap<String, Integer>();
 		TreeMap<String, ArrayList<Integer>> typesInstances = new TreeMap<String, ArrayList<Integer>>();
 
 		try(
 			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
 			BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
+			BufferedWriter  tplblf = tpLblFName != null ? Files.newBufferedWriter(Paths.get(tpLblFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
 			BufferedWriter  clsf = Files.newBufferedWriter(Paths.get(clsFName));
 		) {
 			final int  idNone = -1;
@@ -153,12 +156,24 @@ public class SimilarityMatix {
 				}
 			}
 			
-			for(ArrayList<Integer> iids: typesInstances.values()) {
-				for(int pid: iids)
-					clsf.write(pid + " ");
-				clsf.write("\n");
-			}
+			typesInstances.forEach((tplb, iids) -> {
+				try {
+					// Output cluster members as subject ids
+					for(int pid: iids)
+						clsf.write(pid + " ");
+					clsf.write("\n");
+					// Output the cluster (type) label
+					if(tplblf != null) {
+						tplblf.write(tplb);
+						tplblf.write("\n");
+					}
+				} catch(IOException err) {
+					throw new UncheckedIOException(err);
+				}
+			});
 			System.out.println("Ground-truth extracted from " + n3DataSet + " to " + clsFName);
+			if(tpLblFName != null)
+				System.out.println("Clusters labels are formed: " + tpLblFName);
 			if(idMapFName != null)
 				System.out.println("Instance id to name (subject) mapping is formed: " + idMapFName);
 		}

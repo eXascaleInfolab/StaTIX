@@ -34,13 +34,14 @@ public class main {
 		options.addOptionGroup(optspv);
 		options.addOption("o", "output", true, "Output file, default: <inpfile>" + Statix.extCls);
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id> <subject_name>), default: disabled");
+		options.addOption("l", "cl-label", true, "Output map of the cluster labels (names) (<inpfile>.clb in the label per line format, default: disabled");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering (recommended for large datasets). Options X[Y]; X: a - accurate, m - mean, s - severe; Y: o - use optimization function for the links reduction (default), w - reduce links by their raw weight. Examples: -r m, -r mw");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have the '#type' property in the input dataset, used for the type inference evaluation");
 		options.addOption("w", "weigh-instance", false, "Weight RDF instances (subjects, consider the self-relation) or use only the weighted relations between the instances");
 		options.addOption("j", "jaccard-similarity", false, "Use (weighted) Jaccard instead of the Cosine similarity");
-		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format");
+		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format, optionally with subjects and type labels");
 		options.addOption("u", "unique-triples", false, "Unique triples only are present in the ground-truth dataset (natty, clean data without duplicates), so there is no need of the possible duplicates identification and omission");
 		options.addOption("p", "network", true, "Produce .rcg input network file for the clustering without the type inference itself");
 		options.addOption("v", "version", false, "Show version");
@@ -94,8 +95,11 @@ public class main {
 			// Check for the GT extraction
 			if(cmd.hasOption("e")) {
 				if(cmd.hasOption("n"))
-					idMapFName = cmd.getOptionValue("n");				
-				SimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName, dirty);
+					idMapFName = cmd.getOptionValue("n");
+				String tpLblFName = null;
+				if(cmd.hasOption("l"))
+					tpLblFName = cmd.getOptionValue("l");
+				SimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName, tpLblFName, dirty);
 				System.exit(0);
 			}
 
