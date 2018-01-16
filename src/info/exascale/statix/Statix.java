@@ -347,12 +347,15 @@ public class Statix {
 	//!
 	//! @param weighnode  - weigh nodes (node self-weight) besides their links
 	//! @param jaccard  - use (weighted) Jaccard instead of the Cosine similarity
+	//! @param rawrds  - raw links reduction
 	//! @return the input graph for the clustering
-	protected Graph buildGraph(final boolean weighnode, final boolean jaccard) {
+	protected Graph buildGraph(final boolean weighnode, final boolean jaccard, final boolean rawrds) {
 		final Set<String>  instances = csmat.instances();
 		final int  instsNum = instances.size();
 		Graph  gr = new Graph(instsNum);
 		InpLinks  grInpLinks = new InpLinks();
+		// Minimal links number of the instance to apply the raw links reduction
+		final float  rdsmarg = (float)Math.pow(instances.size(), 1.f - Math.exp(-2.f));  // 0.86466
 
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
 		// so even for the symmetric matrix all iterations should be done
@@ -360,6 +363,8 @@ public class Statix {
 		for (String inst1: instances) {
 			final long  sid = csmat.instanceId(inst1);  // Source node id
 			int j = 0;
+			float  wmin = java.lang.Float.MAX_VALUE;  // Min weight of the instance links
+			double  wsum = 0;  // Sum of the instance links
 			for (String inst2: instances) {
 				if(j++ > i) {  // Skip back links (which should have the same weight anyway) and the self-link
 					final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
@@ -371,6 +376,10 @@ public class Statix {
 					//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
 
 					grInpLinks.add(new InpLink(did, weight));
+					// Update weights statistics
+					wsum += weight;
+					if(wmin > weight)
+						wmin = weight;
 				}
 			}
 			// Add the self-link if required (threated as an edge, i.e. doubled internally)
@@ -380,9 +389,27 @@ public class Statix {
 				if(weight == 0)
 					continue;
 				grInpLinks.add(new InpLink(sid, weight));
+				// Update weights statistics
+				wsum += weight;
+				if(wmin > weight)
+					wmin = weight;
+			}
+			// Perform raw reduction of the links if required
+			if(rawrds && grInpLinks.size() >= rdsmarg) {
+				// Reducing weight margin is half of the average
+				final float  wmarg = wmin + (float)(wsum / instances.size() - wmin) / 2;
+				if(wmarg > wmin) {
+					InpLinks  rdsInpLinks = new InpLinks();
+					for(InpLink ln: grInpLinks)
+						if(ln.getWeight() >= wmarg)
+							rdsInpLinks.add(ln);
+					//if(rdsInpLinks.isEmpty())
+					//	throw new IllegalStateException();
+					grInpLinks = rdsInpLinks;
+				}
 			}
 			//System.out.println();
-			gr.addNodeAndEdges(sid,grInpLinks);
+			gr.addNodeAndEdges(sid, grInpLinks);
 			grInpLinks.clear();
 			++i;
 		}
@@ -452,7 +479,8 @@ public class Statix {
 	
 	public void cluster(String outputPath, float scale, boolean multiLev, char reduction, boolean reduceByWeight, boolean filteringOn, boolean weighnode, boolean jaccard) throws Exception {
 		System.err.println("Calling the clustering lib...");
-		Graph gr = buildGraph(weighnode, jaccard);
+		// Apply raw links reduction for the medium and severe reduction policy to reduce consumed memory
+		Graph gr = buildGraph(weighnode, jaccard, "ms".indexOf(reduction) != -1);
 		// Cosin similarity matrix is not required any more, release it
 		csmat = null;
 		OutputOptions outpopts = new OutputOptions();
