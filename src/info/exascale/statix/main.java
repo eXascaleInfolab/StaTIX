@@ -175,7 +175,8 @@ public class main {
 				// Construct and output the input network for the subsequent clustering without the type inference itself
 				final String  netfile = cmd.getOptionValue("p");
 				try {
-					statix.saveNet(netfile, weighnode, jaccard, "ms".indexOf(reduction) != -1);
+					// Apply additional raw links reduction on preprocessing for the severe reduction policy
+					statix.saveNet(netfile, weighnode, jaccard, reduction == 's');  // "ms".indexOf(reduction) != -1
 				} catch(IOException e) {
 					System.err.println("ERROR on saving to the network file (" + netfile + "):\n");
 					e.printStackTrace();
