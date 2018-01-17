@@ -355,7 +355,8 @@ public class Statix {
 		Graph  gr = new Graph(instsNum);
 		InpLinks  grInpLinks = new InpLinks();
 		// Minimal links number of the instance to apply the raw links reduction
-		final float  rdsmarg = (float)Math.pow(instances.size(), 1.f - Math.exp(-2.f));  // 0.86466
+		// Do not reduce small number of links (1 + var results in > ~20 links)
+		final float  rdsmarg = (float)(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
 
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
 		// so even for the symmetric matrix all iterations should be done
@@ -363,7 +364,7 @@ public class Statix {
 		for (String inst1: instances) {
 			final long  sid = csmat.instanceId(inst1);  // Source node id
 			int j = 0;
-			float  wmin = java.lang.Float.MAX_VALUE;  // Min weight of the instance links
+			float  wmin = Float.MAX_VALUE;  // Min weight of the instance links
 			double  wsum = 0;  // Sum of the instance links
 			for (String inst2: instances) {
 				if(j++ > i) {  // Skip back links (which should have the same weight anyway) and the self-link
@@ -397,7 +398,7 @@ public class Statix {
 			// Perform raw reduction of the links if required
 			if(rawrds && grInpLinks.size() >= rdsmarg) {
 				// Reducing weight margin is half of the average
-				final float  wmarg = wmin + (float)(wsum / instances.size() - wmin) / 2;
+				final float  wmarg = wmin + (float)(wsum / instances.size() - wmin) / 4;
 				if(wmarg > wmin) {
 					InpLinks  rdsInpLinks = new InpLinks();
 					for(InpLink ln: grInpLinks)
@@ -413,6 +414,9 @@ public class Statix {
 			grInpLinks.clear();
 			++i;
 		}
+		// Hint system to collect the unused memory
+		if(rawrds && instances.size() >= 1E4)
+			System.gc();
 
 		System.err.println("The input graph is formed");
 		return gr;
