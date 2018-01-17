@@ -366,7 +366,7 @@ public class Statix {
 			final long  sid = csmat.instanceId(inst1);  // Source node id
 			int j = 0;
 			float  wmin = Float.MAX_VALUE;  // Min weight of the instance links
-			double  wsum = 0;  // Sum of the instance links
+			double  wsum = 0;  // Sum of the instance links, used exclusively for the links reduction
 			for (String inst2: instances) {
 				if(j++ > i) {  // Skip back links (which should have the same weight anyway) and the self-link
 					final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
@@ -392,7 +392,9 @@ public class Statix {
 					continue;
 				grInpLinks.add(new InpLink(sid, weight));
 				// Update weights statistics
-				wsum += weight;
+				// ATTENTION: do not consider self-weight for the links weights margin evaluation
+				wsum += wsum / instances.size();
+				//wsum += weight;
 				if(wmin > weight)
 					wmin = weight;
 			}
@@ -453,7 +455,7 @@ public class Statix {
 				boolean  initial = true;  // First item in the line
 				int  j = 0;
 				float  wmin = Float.MAX_VALUE;  // Min weight of the instance links
-				double  wsum = 0;  // Sum of the instance links
+				double  wsum = 0;  // Sum of the instance links, used exclusively for the links reduction
 				for (String inst2: instances) {
 					if(j > i) {  // Skip back links
 						if(initial) {
@@ -490,7 +492,9 @@ public class Statix {
 					if(rawrds) {
 						grInpLinks.add(new InpLink(sid, weight));
 						// Update weights statistics
-						wsum += weight;
+						// ATTENTION: do not consider self-weight for the links weights margin evaluation
+						wsum += wsum / instances.size();
+						//wsum += weight;
 						if(wmin > weight)
 							wmin = weight;
 					} else netf.write(" " + Integer.toUnsignedString(sid) + ":" + weight);
