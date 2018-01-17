@@ -415,7 +415,7 @@ public class Statix {
 			if(!grInpLinks.isEmpty())
 				links = grInpLinks;
 			//System.out.println();
-			gr.addNodeAndEdges(sid, grInpLinks);
+			gr.addNodeAndEdges(sid, links);
 			links.clear();
 			++i;
 		}
