@@ -412,26 +412,28 @@ public class Statix {
 				}
 			}
 			// Perform raw reduction of the links if required
-			InpLinks  links = rdsInpLinks;
-			if(rawrds && grInpLinks.size() >= rdsmarg) {
-				// Reducing weight margin is half of the average
-				final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) / 4;
-				if(wmarg > wmin) {
-					for(InpLink ln: grInpLinks)
-						if(ln.getWeight() >= wmarg)
-							links.add(ln);
-					//if(rdsInpLinks.isEmpty())
-					//	throw new IllegalStateException();
-					grInpLinks.clear();
+			if(rawrds) {
+				InpLinks  links = rdsInpLinks;
+				if(rawrds && grInpLinks.size() >= rdsmarg) {
+					// Reducing weight margin is half of the average
+					final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) / 4;
+					if(wmarg > wmin) {
+						for(InpLink ln: grInpLinks)
+							if(ln.getWeight() >= wmarg)
+								links.add(ln);
+						//if(rdsInpLinks.isEmpty())
+						//	throw new IllegalStateException();
+						grInpLinks.clear();
+					}
 				}
-			}
-			if(!grInpLinks.isEmpty())
-				links = grInpLinks;
-			//System.out.println();
-			if(rawrds)
+				if(!grInpLinks.isEmpty())
+					links = grInpLinks;
 				gr.addNodeAndArcs(sid, links);
-			else gr.addNodeAndEdges(sid, links);
-			links.clear();
+				links.clear();
+			} else {
+				gr.addNodeAndEdges(sid, grInpLinks);
+				grInpLinks.clear();
+			}
 		}
 		// Hint system to collect the released memory used for the graph construction
 		if(instances.size() >= 1E4)
