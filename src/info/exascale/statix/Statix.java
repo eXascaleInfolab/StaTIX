@@ -354,6 +354,7 @@ public class Statix {
 		final int  instsNum = instances.size();
 		Graph  gr = new Graph(instsNum);
 		InpLinks  grInpLinks = new InpLinks();
+		InpLinks  rdsInpLinks = rawrds ? new InpLinks() : null;  // Reducing links
 		// Minimal links number of the instance to apply the raw links reduction
 		// Do not reduce small number of links (1 + var results in > ~20 links)
 		final float  rdsmarg = (float)(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
@@ -400,13 +401,14 @@ public class Statix {
 				// Reducing weight margin is half of the average
 				final float  wmarg = wmin + (float)(wsum / instances.size() - wmin) / 4;
 				if(wmarg > wmin) {
-					InpLinks  rdsInpLinks = new InpLinks();
 					for(InpLink ln: grInpLinks)
 						if(ln.getWeight() >= wmarg)
 							rdsInpLinks.add(ln);
 					//if(rdsInpLinks.isEmpty())
 					//	throw new IllegalStateException();
-					grInpLinks = rdsInpLinks;
+					grInpLinks.clear();
+					grInpLinks.addAll(rdsInpLinks);
+					rdsInpLinks.clear();
 				}
 			}
 			//System.out.println();
@@ -414,8 +416,8 @@ public class Statix {
 			grInpLinks.clear();
 			++i;
 		}
-		// Hint system to collect the unused memory
-		if(rawrds && instances.size() >= 1E4)
+		// Hint system to collect the released memory used for the graph construction
+		if(instances.size() >= 1E4)
 			System.gc();
 
 		System.err.println("The input graph is formed");
@@ -427,7 +429,7 @@ public class Statix {
 	//! @param outputPath  - the network file name
 	//! @param weighnode  - weigh nodes (node self-weight) besides their links
 	//! @param jaccard  - use (weighted) Jaccard instead of the Cosine similarity
-	public void saveNet(String outputPath, final boolean weighnode, final boolean jaccard) throws IOException {
+	public void saveNet(String outputPath, final boolean weighnode, final boolean jaccard, final boolean rawrds) throws IOException {
 		try(
 			BufferedWriter  netf = Files.newBufferedWriter(Paths.get(outputPath));  // new BufferedWriter(new FileWriter(idMapFName))
 		) {
@@ -436,6 +438,11 @@ public class Statix {
 
 			// Write .rcg header
 			netf.write("/Graph weighted:1 validated:1\n/Nodes " + instsNum + "\n/Edges\n");
+			InpLinks  grInpLinks = rawrds ? new InpLinks() : null;
+			InpLinks  rdsInpLinks = rawrds ? new InpLinks() : null;  // Reducing links
+			// Minimal links number of the instance to apply the raw links reduction
+			// Do not reduce small number of links (1 + var results in > ~20 links)
+			final float  rdsmarg = (float)(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
 
 			// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
 			// so even for the symmetric matrix all iterations should be done
@@ -444,6 +451,8 @@ public class Statix {
 				final int  sid = csmat.instanceId(inst1);  // Source node id
 				boolean  initial = true;  // First item in the line
 				int  j = 0;
+				float  wmin = Float.MAX_VALUE;  // Min weight of the instance links
+				double  wsum = 0;  // Sum of the instance links
 				for (String inst2: instances) {
 					if(j > i) {  // Skip back links
 						if(initial) {
@@ -457,7 +466,13 @@ public class Statix {
 						//System.out.print(" " + did + ":" + weight);
 						//if(weight <= 0 || Float.isNaN(weight))
 						//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
-						netf.write(" " + Integer.toUnsignedString(did) + ":" + weight);
+						if(rawrds) {
+							grInpLinks.add(new InpLink(did, weight));
+							// Update weights statistics
+							wsum += weight;
+							if(wmin > weight)
+								wmin = weight;
+						} else netf.write(" " + Integer.toUnsignedString(did) + ":" + weight);
 					}
 					++j;
 				}
@@ -471,7 +486,35 @@ public class Statix {
 						initial = false;
 						netf.write(Integer.toUnsignedString(sid) + ">");
 					}
-					netf.write(" " + Integer.toUnsignedString(sid) + ":" + weight);
+					if(rawrds) {
+						grInpLinks.add(new InpLink(sid, weight));
+						// Update weights statistics
+						wsum += weight;
+						if(wmin > weight)
+							wmin = weight;
+					} else netf.write(" " + Integer.toUnsignedString(sid) + ":" + weight);
+				}
+				// Perform raw reduction of the links if required
+				if(rawrds) {
+					if(grInpLinks.size() >= rdsmarg) {
+						// Reducing weight margin is half of the average
+						final float  wmarg = wmin + (float)(wsum / instances.size() - wmin) / 4;
+						if(wmarg > wmin) {
+							for(InpLink ln: grInpLinks)
+								if(ln.getWeight() >= wmarg)
+									rdsInpLinks.add(ln);
+							//if(rdsInpLinks.isEmpty())
+							//	throw new IllegalStateException();
+							grInpLinks.clear();
+							grInpLinks.addAll(rdsInpLinks);
+							rdsInpLinks.clear();
+						}
+					}
+					// Output grInpLinks
+					for(InpLink ln: grInpLinks)
+						netf.write(" " + Integer.toUnsignedString((int)ln.getId())
+							+ ":" + ln.getWeight());
+					grInpLinks.clear();
 				}
 				if(!initial)
 					netf.write("\n");
