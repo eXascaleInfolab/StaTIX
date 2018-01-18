@@ -28,8 +28,7 @@ class InstanceProperties {
 	public TreeSet<String> properties = new TreeSet<String>();
 	
 	 
-	public InstanceProperties(int id, String property)
-	{
+	public InstanceProperties(int id, String property) {
 		if(property == null || property.isEmpty())
 			throw new IllegalArgumentException("The property is empty for id: " + id);
 		
@@ -37,9 +36,24 @@ class InstanceProperties {
 		properties.add(property);
 	}
 	
-	public InstanceProperties(int id)
-	{
+	public InstanceProperties(int id) {
 		this.id=id;
+	}
+}
+
+
+class IdTyped {
+	public int  id;
+	public boolean  typed;
+	
+	IdTyped(int id, boolean typed) {
+		this.id = id;
+		this.typed = typed;
+	}
+
+	IdTyped(int id) {
+		this.id = id;
+		this.typed = false;
 	}
 }
 
@@ -115,29 +129,29 @@ public class SimilarityMatix {
 	//! @param tpLblFName  - optional cluster labels file name to be formed (label per line format)
 	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
 	public static void extractGT(String n3DataSet, String clsFName, boolean filteringOn, String idMapFName, String tpLblFName, boolean dirty) throws IOException {
-		HashMap<String, Integer> instances = new HashMap<String, Integer>();
+		HashMap<String, IdTyped> instances = new HashMap<String, IdTyped>();
 		HashMap<String, ArrayList<Integer>> typesInstances = new HashMap<String, ArrayList<Integer>>();
 
 		try(
 			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
-			BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
+			BufferedWriter  idmapf = idMapFName != null && !filteringOn ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
 			BufferedWriter  tplblf = tpLblFName != null ? Files.newBufferedWriter(Paths.get(tpLblFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
 			BufferedWriter  clsf = Files.newBufferedWriter(Paths.get(clsFName));
 		) {
-			final int  idNone = -1;
 			String  line = null;
 			while((line = bufferedReader.readLine()) != null) {
 				final String[] s = parseTriple(line);
 				if(s == null)
 					continue;
 				final String inst = s[0];
-				int id = instances.size();
-				if(!instances.containsKey(inst)) {
-					instances.put(inst, id);
+				IdTyped  idtp = instances.get(inst);
+				if(idtp == null) {
+					idtp = new IdTyped(instances.size());
+					instances.put(inst, idtp);
 					// Form id to instance name mapping
-					if(idmapf != null && !filteringOn)
-						idmapf.write(id + "\t" + inst + "\n");
-				} else id = idNone;
+					if(idmapf != null)
+						idmapf.write(idtp.id + "\t" + inst + "\n");
+				}
 
 				// Check for the type property
 				if(typeProperty.equals(s[1])) {
@@ -147,14 +161,13 @@ public class SimilarityMatix {
 						iids = new ArrayList<Integer>();
 						typesInstances.put(obj, iids);
 					}
-					if(id == idNone)
-						id = instances.get(inst);
+					idtp.typed = true;
 					if(!iids.isEmpty() && dirty) {
-						int pos = Collections.binarySearch(iids, id);
+						int pos = Collections.binarySearch(iids, idtp.id);
 						// Omit duplicated types (#type values) in the entities, add only new types
 						if(pos < 0)
-							iids.add(-pos - 1, id);
-					} else iids.add(id);
+							iids.add(-pos - 1, idtp.id);
+					} else iids.add(idtp.id);
 				}
 			}
 			
@@ -176,9 +189,29 @@ public class SimilarityMatix {
 			System.out.println("Ground-truth extracted from " + n3DataSet + " to " + clsFName);
 			if(tpLblFName != null)
 				System.out.println("Clusters labels are formed: " + tpLblFName);
-			if(idMapFName != null)
-				System.out.println("Instance id to name (subject) mapping is formed: " + idMapFName);
 		}
+		// Output the instance idmap considering the filtering
+		if(filteringOn && idMapFName != null) {
+			try (
+				BufferedWriter  idmapf = Files.newBufferedWriter(Paths.get(idMapFName))  // new BufferedWriter(new FileWriter(idMapFName)))
+			) {
+				// Update ids considering the filtering
+				final int mask = 1 << 31;
+				
+				//for(Map.Entry<K,V> entry: instsProps.entrySet())
+				instances.forEach((name, prop) -> {
+					try {
+						if(!prop.typed)
+							prop.id = prop.id | mask; 
+						idmapf.write(Integer.toUnsignedString(prop.id) + "\t" + name + "\n");
+					} catch(IOException err) {
+						throw new UncheckedIOException(err);
+					}
+				});
+			}
+		}
+		if(idMapFName != null)
+			System.out.println("Instance id to name (subject) mapping is formed: " + idMapFName);
 	}
 
 	static class PropertyExt {
@@ -205,7 +238,7 @@ public class SimilarityMatix {
 		
 		try(
 			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
-			BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
+			BufferedWriter  idmapf = idMapFName != null && !filteringOn ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
 		) {
 			String  line = null;
 			while ((line = bufferedReader.readLine()) != null) {
@@ -222,7 +255,7 @@ public class SimilarityMatix {
 					// Note: to have the isTyped flag the even empty properties should be added to the map
 					instProps.put(inst, instanceProperties);
 					// Form id to instance name mapping
-					if (idmapf != null && !filteringOn)
+					if (idmapf != null)
 						idmapf.write(id + "\t" + inst + "\n");
 				}
 				// Do not add #type property
@@ -241,8 +274,6 @@ public class SimilarityMatix {
 					props.put(propext.name, propext);
 				} else ++propext.ocrs;
 			}
-			if(idMapFName != null)
-				System.out.println("Instance id to name (subject) mapping is formed: " + idMapFName);
 		}
 		// Save total number of occurrences to the attribute
 		this.propsocrs = ocrs;
@@ -273,7 +304,24 @@ public class SimilarityMatix {
 					//System.out.println("value= " + instps.id);
 				}
 			});
+			
+			// Output the instance idmap considering the filtering
+			if(idMapFName != null) {
+				try (
+					BufferedWriter  idmapf = Files.newBufferedWriter(Paths.get(idMapFName))  // new BufferedWriter(new FileWriter(idMapFName)))
+				) {
+					this.instsProps.forEach((ipname, ipp) -> {
+						try {
+							idmapf.write(Integer.toUnsignedString(ipp.id) + "\t" + ipname + "\n");
+						} catch(IOException err) {
+							throw new UncheckedIOException(err);
+						}
+					});
+				}
+			}
 		}
+		if(idMapFName != null)
+			System.out.println("Instance id to name (subject) mapping is formed: " + idMapFName);
 
 		HashMap<String, Integer> propsocrs = new HashMap<String, Integer>(props.size(), 1);
 		props.forEach((name, propx) -> {
