@@ -353,15 +353,15 @@ public class Statix {
 		final Set<String>  instances = csmat.instances();
 		final int  instsNum = instances.size();
 		Graph  gr = new Graph(instsNum);
-		// Note: The nodes number and starting id is specified explicitly => preallocated,
-		// so the stand-alone nodes are already implicitly specified if exist any.
-		gr.addNodes(instsNum, 0);  // Create all nodes to avoid dedicated creation of the stand-alone nodes
+		// ATTENTION: filtering out nodes have negative ids, so the nodes can't be preallocated in advance.
+		//gr.addNodes(instsNum, 0);  // Create all nodes to avoid dedicated creation of the stand-alone nodes
 		InpLinks  grInpLinks = new InpLinks();
 		InpLinks  rdsInpLinks = rawrds ? new InpLinks() : null;  // Reducing links
 		// Minimal links number of the instance to apply the raw links reduction
 		// Do not reduce small number of links (1 + var results in > ~20 links)
 		final float  rdsmarg = (float)(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
 
+		HashSet<Long>  nids = new HashSet<Long>();  // Stand alone node ids
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
 		// so even for the symmetric matrix all iterations should be done
 		int i = 0;
@@ -373,10 +373,13 @@ public class Statix {
 			double  wsum = 0;  // Sum of the instance links, used exclusively for the links reduction
 			for (String inst2: instances) {
 				if(++j > i) {  // Skip back links (which should have the same weight anyway) and the self-link. Possible only if edges are used (raw links reduction is disabled)
+					final long  did = csmat.instanceId(inst2);
 					final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
-					if(weight == 0)
+					if(weight == 0) {
+						nids.add(did);
+						//gr.addNodes(1, did);  // Consider stand-alone nodes
 						continue;
-					final long did = csmat.instanceId(inst2);
+					}
 					//System.out.print(" " + did + ":" + weight);
 					//if(weight <= 0 || Float.isNaN(weight))
 					//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
@@ -387,10 +390,13 @@ public class Statix {
 					if(wmin > weight)
 						wmin = weight;
 				} else if(rawrds && j != i) {
+					final long  did = csmat.instanceId(inst2);
 					final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
-					if(weight == 0)
+					if(weight == 0) {
+						nids.add(did);
+						//gr.addNodes(1, did);  // Consider stand-alone nodes
 						continue;
-					final long did = csmat.instanceId(inst2);
+					}
 					grInpLinks.add(new InpLink(did, weight));
 					// Update weights statistics
 					wsum += weight;
@@ -412,7 +418,7 @@ public class Statix {
 							wmin = weight;
 					}
 					grInpLinks.add(new InpLink(sid, weight));
-				}
+				} else nids.add(sid);  // gr.addNodes(1, sid);  // Consider stand-alone nodes
 			}
 			// Perform raw reduction of the links if required
 			InpLinks  links = rdsInpLinks;
@@ -435,6 +441,14 @@ public class Statix {
 			gr.addNodeAndEdges(sid, links);
 			links.clear();
 		}
+		// Add missed nids to the graph
+		Ids  dnids = new Ids();  // Stand alone node ids
+		dnids.reserve(nids.size());
+		for(Long nid: nids)
+			dnids.add(nid);
+		nids = null;
+		gr.addNodes(dnids);
+		dnids = null;
 		// Hint system to collect the released memory used for the graph construction
 		if(instances.size() >= 1E4)
 			System.gc();
@@ -457,7 +471,7 @@ public class Statix {
 			final int  instsNum = instances.size();
 
 			// Write .rcg header
-			netf.write("/Graph weighted:1 validated:1\n/Nodes " + instsNum + " 0"  // Starting from id 0
+			netf.write("/Graph weighted:1 validated:1\n/Nodes " + instsNum  // ATTENTION: the starting id should not be specified if the filtering is enabled
 				// Note: the matrix is always symmetric, just for the "rawrds" duplicated edges may be saved and should be omitted
 				//+ "\n/" + (rawrds ? "Arcs" : "Edges") + "\n"
 				+ "\n/Edges\n");
@@ -479,8 +493,6 @@ public class Statix {
 				float  wmin = Float.MAX_VALUE;  // Min weight of the instance links
 				double  wsum = 0;  // Sum of the instance links, used exclusively for the links reduction
 				int  j = 0;
-				// Note: The nodes number and starting id is specified explicitly => preallocated,
-				// so the stand-alone nodes are already implicitly specified if exist any.
 				for (String inst2: instances) {
 					if(++j > i) {  // Skip back links if edges are used (raw links reduction is disabled)
 						final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
@@ -539,8 +551,6 @@ public class Statix {
 					}
 				}
 				// Perform raw reduction of the links if required
-				// Note: The nodes number and starting id is specified explicitly => preallocated,
-				// so the stand-alone nodes are already implicitly specified if exist any.
 				if(rawrds && !grInpLinks.isEmpty()) {
 					if(initial) {
 						initial = false;
@@ -569,9 +579,8 @@ public class Statix {
 				}
 				if(!initial)
 					netf.write("\n");
-				// Note: The nodes number and starting id is specified explicitly => preallocated,
-				// so the stand-alone nodes are already implicitly specified if exist any.
-				//else netf.write(Integer.toUnsignedString(sid) + ">\n");
+				// ATTENTION: consider stand-alone nodes with possibly negative ids (if the filtering is applied)
+				else netf.write(Integer.toUnsignedString(sid) + ">\n");
 			}
 			System.err.println("The network is saved to: " + outputPath);
 		}

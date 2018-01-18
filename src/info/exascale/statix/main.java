@@ -33,7 +33,7 @@ public class main {
 		//options.addOption("p", "supervised", true, "Supervision hint data in the format: <indicativity>\t <property>, where indicativity E [0, 1], '#' line comments are allowed.");
 		options.addOptionGroup(optspv);
 		options.addOption("o", "output", true, "Output file, default: <inpfile>" + Statix.extCls);
-		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id> <subject_name>), default: disabled");
+		options.addOption("n", "id-name", true, "Output map of the instance id names (<inpfile>.idm in tab separated format: <id> <subject_name>), default: disabled. Note: all instances are mapped including non-typed ones");
 		options.addOption("l", "cl-label", true, "Output map of the cluster labels (names) (<inpfile>.clb in the label per line format, default: disabled, requires: -e");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
@@ -92,21 +92,21 @@ public class main {
 			String idMapFName = cmd.hasOption("n") ? cmd.getOptionValue("n") : null;
 			final boolean dirty = !cmd.hasOption("u");
 
+			// Check for the filtering option
+			// ATTENTION: should be done before the input datasets reading
+			final boolean filteringOn = cmd.hasOption("f");				
+
 			// Check for the GT extraction
 			if(cmd.hasOption("l") && !cmd.hasOption("e"))
 				throw new IllegalArgumentException("Parameter -l requires -e");
 			if(cmd.hasOption("e")) {
 				final String tpLblFName = cmd.hasOption("l") ? cmd.getOptionValue("l") : null;
-				SimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName, tpLblFName, dirty);
+				SimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), filteringOn, idMapFName, tpLblFName, dirty);
 				if(!cmd.hasOption("p") && !cmd.hasOption("o"))
 					System.exit(0);
 				idMapFName = null;
 			}
 
-			// Check for the filtering option
-			// ATTENTION: should be done before the input datasets reading
-			final boolean filteringOn = cmd.hasOption("f");
-				
 			if(cmd.hasOption("g")) {
 				String gtDataset = cmd.getOptionValue("g");
 				//System.out.println("Ground-truth file= "+gtDataset);

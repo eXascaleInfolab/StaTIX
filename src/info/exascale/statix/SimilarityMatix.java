@@ -109,10 +109,12 @@ public class SimilarityMatix {
 	//! 
 	//! @param n3DataSet  - input dataset with labeled types
 	//! @param clsFName  - output clusters in the .cnl format
+	//! @param filteringOn  - filter out non-typed instances from the output by inverting their ids,
+	//! 	useful for the benchmarking working with ground-truth files
 	//! @param idMapFName  - optional file name to output mapping of the instance id to the name (RDF subjects)
 	//! @param tpLblFName  - optional cluster labels file name to be formed (label per line format)
 	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
-	public static void extractGT(String n3DataSet, String clsFName, String idMapFName, String tpLblFName, boolean dirty) throws IOException {
+	public static void extractGT(String n3DataSet, String clsFName, boolean filteringOn, String idMapFName, String tpLblFName, boolean dirty) throws IOException {
 		HashMap<String, Integer> instances = new HashMap<String, Integer>();
 		HashMap<String, ArrayList<Integer>> typesInstances = new HashMap<String, ArrayList<Integer>>();
 
@@ -133,7 +135,7 @@ public class SimilarityMatix {
 				if(!instances.containsKey(inst)) {
 					instances.put(inst, id);
 					// Form id to instance name mapping
-					if(idmapf != null)
+					if(idmapf != null && !filteringOn)
 						idmapf.write(id + "\t" + inst + "\n");
 				} else id = idNone;
 
@@ -220,7 +222,7 @@ public class SimilarityMatix {
 					// Note: to have the isTyped flag the even empty properties should be added to the map
 					instProps.put(inst, instanceProperties);
 					// Form id to instance name mapping
-					if (idmapf != null)
+					if (idmapf != null && !filteringOn)
 						idmapf.write(id + "\t" + inst + "\n");
 				}
 				// Do not add #type property
