@@ -353,6 +353,9 @@ public class Statix {
 		final Set<String>  instances = csmat.instances();
 		final int  instsNum = instances.size();
 		Graph  gr = new Graph(instsNum);
+		// Note: The nodes number and starting id is specified explicitly => preallocated,
+		// so the stand-alone nodes are already implicitly specified if exist any.
+		gr.addNodes(instsNum, 0);  // Create all nodes to avoid dedicated creation of the stand-alone nodes
 		InpLinks  grInpLinks = new InpLinks();
 		InpLinks  rdsInpLinks = rawrds ? new InpLinks() : null;  // Reducing links
 		// Minimal links number of the instance to apply the raw links reduction
@@ -412,28 +415,25 @@ public class Statix {
 				}
 			}
 			// Perform raw reduction of the links if required
-			if(rawrds) {
-				InpLinks  links = rdsInpLinks;
-				if(rawrds && grInpLinks.size() >= rdsmarg) {
-					// Reducing weight margin is half of the average
-					final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) / 4;
-					if(wmarg > wmin) {
-						for(InpLink ln: grInpLinks)
-							if(ln.getWeight() >= wmarg)
-								links.add(ln);
-						//if(rdsInpLinks.isEmpty())
-						//	throw new IllegalStateException();
-						grInpLinks.clear();
-					}
+			InpLinks  links = rdsInpLinks;
+			if(rawrds && grInpLinks.size() >= rdsmarg) {
+				// Reducing weight margin is half of the average
+				final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) / 4;
+				if(wmarg > wmin) {
+					for(InpLink ln: grInpLinks)
+						if(ln.getWeight() >= wmarg)
+							links.add(ln);
+					if(links.isEmpty())
+						throw new IllegalStateException("Links should be formed, wmarg: " + wmarg);  // String.valueOf()
+					grInpLinks.clear();
 				}
-				if(!grInpLinks.isEmpty())
-					links = grInpLinks;
-				gr.addNodeAndArcs(sid, links);
-				links.clear();
-			} else {
-				gr.addNodeAndEdges(sid, grInpLinks);
-				grInpLinks.clear();
 			}
+			if(!rawrds || !grInpLinks.isEmpty())
+				links = grInpLinks;
+			// Note: the matrix is always symmetric, just for the "rawrds" duplicated edges may be saved
+			// and should be omitted (internally by the clustering lib)
+			gr.addNodeAndEdges(sid, links);
+			links.clear();
 		}
 		// Hint system to collect the released memory used for the graph construction
 		if(instances.size() >= 1E4)
@@ -479,7 +479,7 @@ public class Statix {
 				float  wmin = Float.MAX_VALUE;  // Min weight of the instance links
 				double  wsum = 0;  // Sum of the instance links, used exclusively for the links reduction
 				int  j = 0;
-				// Note: The nodes number and starting id are specified explicitly => preallocated,
+				// Note: The nodes number and starting id is specified explicitly => preallocated,
 				// so the stand-alone nodes are already implicitly specified if exist any.
 				for (String inst2: instances) {
 					if(++j > i) {  // Skip back links if edges are used (raw links reduction is disabled)
@@ -539,7 +539,7 @@ public class Statix {
 					}
 				}
 				// Perform raw reduction of the links if required
-				// Note: The nodes number and starting id are specified explicitly => preallocated,
+				// Note: The nodes number and starting id is specified explicitly => preallocated,
 				// so the stand-alone nodes are already implicitly specified if exist any.
 				if(rawrds && !grInpLinks.isEmpty()) {
 					if(initial) {
@@ -569,7 +569,7 @@ public class Statix {
 				}
 				if(!initial)
 					netf.write("\n");
-				// Note: The nodes number and starting id are specified explicitly => preallocated,
+				// Note: The nodes number and starting id is specified explicitly => preallocated,
 				// so the stand-alone nodes are already implicitly specified if exist any.
 				//else netf.write(Integer.toUnsignedString(sid) + ">\n");
 			}
