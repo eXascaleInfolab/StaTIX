@@ -457,7 +457,12 @@ public class Statix {
 			final int  instsNum = instances.size();
 
 			// Write .rcg header
-			netf.write("/Graph weighted:1 validated:1\n/Nodes " + instsNum + "\n/" + (rawrds ? "Arcs" : "Edges") + "\n");
+			netf.write("/Graph weighted:1 validated:1\n/Nodes " + instsNum + " 0"  // Starting from id 0
+				// Note: the matrix is always symmetric, just for the "rawrds" duplicated edges may be saved and should be omitted
+				//+ "\n/" + (rawrds ? "Arcs" : "Edges") + "\n"
+				+ "\n/Edges\n");
+			if(rawrds)
+				netf.write("# Note: duplicated edges may exist and should be omitted\n");
 			InpLinks  grInpLinks = rawrds ? new InpLinks() : null;
 			InpLinks  rdsInpLinks = rawrds ? new InpLinks() : null;  // Reducing links
 			// Minimal links number of the instance to apply the raw links reduction
@@ -471,15 +476,13 @@ public class Statix {
 				++i;
 				final int  sid = csmat.instanceId(inst1);  // Source node id
 				boolean  initial = true;  // First item in the line
-				int  j = 0;
 				float  wmin = Float.MAX_VALUE;  // Min weight of the instance links
 				double  wsum = 0;  // Sum of the instance links, used exclusively for the links reduction
+				int  j = 0;
+				// Note: The nodes number and starting id are specified explicitly => preallocated,
+				// so the stand-alone nodes are already implicitly specified if exist any.
 				for (String inst2: instances) {
 					if(++j > i) {  // Skip back links if edges are used (raw links reduction is disabled)
-						if(initial) {
-							initial = false;
-							netf.write(Integer.toUnsignedString(sid) + ">");
-						}
 						final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
 						if(weight == 0)
 							continue;
@@ -493,7 +496,13 @@ public class Statix {
 							wsum += weight;
 							if(wmin > weight)
 								wmin = weight;
-						} else netf.write(" " + Integer.toUnsignedString(did) + ":" + weight);
+						} else {
+							if(initial) {
+								initial = false;
+								netf.write(Integer.toUnsignedString(sid) + ">");
+							}
+							netf.write(" " + Integer.toUnsignedString(did) + ":" + weight);
+						}
 					} else if(rawrds && j != i) {
 						final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
 						if(weight == 0)
@@ -530,7 +539,13 @@ public class Statix {
 					}
 				}
 				// Perform raw reduction of the links if required
-				if(rawrds) {
+				// Note: The nodes number and starting id are specified explicitly => preallocated,
+				// so the stand-alone nodes are already implicitly specified if exist any.
+				if(rawrds && !grInpLinks.isEmpty()) {
+					if(initial) {
+						initial = false;
+						netf.write(Integer.toUnsignedString(sid) + ">");
+					}
 					InpLinks  links = rdsInpLinks;
 					if(grInpLinks.size() >= rdsmarg) {
 						// Reducing weight margin is half of the average
@@ -539,8 +554,8 @@ public class Statix {
 							for(InpLink ln: grInpLinks)
 								if(ln.getWeight() >= wmarg)
 									links.add(ln);
-							//if(rdsInpLinks.isEmpty())
-							//	throw new IllegalStateException();
+							if(links.isEmpty())
+								throw new IllegalStateException("Links should be formed, wmarg: " + wmarg);  // String.valueOf()
 							grInpLinks.clear();
 						}
 					}
@@ -554,7 +569,9 @@ public class Statix {
 				}
 				if(!initial)
 					netf.write("\n");
-				else netf.write(Integer.toUnsignedString(sid) + ">\n");
+				// Note: The nodes number and starting id are specified explicitly => preallocated,
+				// so the stand-alone nodes are already implicitly specified if exist any.
+				//else netf.write(Integer.toUnsignedString(sid) + ">\n");
 			}
 			System.err.println("The network is saved to: " + outputPath);
 		}
@@ -622,6 +639,6 @@ public class Statix {
 		Hierarchy hr = gr.buildHierarchy(cops);
 		System.err.println("Starting the hierarchy output");
 		hr.output(outpopts);
-		System.err.println("The types inference is completed");
+		System.err.println("The types inference is completed to " + outputPath);
 	}
 }

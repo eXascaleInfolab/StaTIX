@@ -113,8 +113,8 @@ public class SimilarityMatix {
 	//! @param tpLblFName  - optional cluster labels file name to be formed (label per line format)
 	//! @param dirty  - the input data is dirty and might contain duplicated triples that should be eliminated
 	public static void extractGT(String n3DataSet, String clsFName, String idMapFName, String tpLblFName, boolean dirty) throws IOException {
-		TreeMap<String, Integer> instances = new TreeMap<String, Integer>();
-		TreeMap<String, ArrayList<Integer>> typesInstances = new TreeMap<String, ArrayList<Integer>>();
+		HashMap<String, Integer> instances = new HashMap<String, Integer>();
+		HashMap<String, ArrayList<Integer>> typesInstances = new HashMap<String, ArrayList<Integer>>();
 
 		try(
 			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
@@ -204,7 +204,7 @@ public class SimilarityMatix {
 		try(
 			BufferedReader  bufferedReader = Files.newBufferedReader(Paths.get(n3DataSet)); // new BufferedReader(new FileReader(n3DataSet));
 			BufferedWriter  idmapf = idMapFName != null ? Files.newBufferedWriter(Paths.get(idMapFName)) : null;  // new BufferedWriter(new FileWriter(idMapFName))
-		) {   
+		) {
 			String  line = null;
 			while ((line = bufferedReader.readLine()) != null) {
 				final String[] s = parseTriple(line);

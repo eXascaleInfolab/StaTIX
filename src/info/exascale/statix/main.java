@@ -34,7 +34,7 @@ public class main {
 		options.addOptionGroup(optspv);
 		options.addOption("o", "output", true, "Output file, default: <inpfile>" + Statix.extCls);
 		options.addOption("n", "id-name", true, "Output map of the id names (<inpfile>.idm in tab separated format: <id> <subject_name>), default: disabled");
-		options.addOption("l", "cl-label", true, "Output map of the cluster labels (names) (<inpfile>.clb in the label per line format, default: disabled");
+		options.addOption("l", "cl-label", true, "Output map of the cluster labels (names) (<inpfile>.clb in the label per line format, default: disabled, requires: -e");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
 		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering (recommended for large datasets). Options X[Y]; X: a - accurate, m - mean, s - severe; Y: o - use optimization function for the links reduction (default), w - reduce links by their raw weight. Examples: -r m, -r mw");
@@ -89,25 +89,23 @@ public class main {
 			if(files.length != 1)
 				throw new IllegalArgumentException("A single input dataset is expected with optimal parameters");
 			
-			String idMapFName = null;
+			String idMapFName = cmd.hasOption("n") ? cmd.getOptionValue("n") : null;
 			final boolean dirty = !cmd.hasOption("u");
 
 			// Check for the GT extraction
+			if(cmd.hasOption("l") && !cmd.hasOption("e"))
+				throw new IllegalArgumentException("Parameter -l requires -e");
 			if(cmd.hasOption("e")) {
-				if(cmd.hasOption("n"))
-					idMapFName = cmd.getOptionValue("n");
-				String tpLblFName = null;
-				if(cmd.hasOption("l"))
-					tpLblFName = cmd.getOptionValue("l");
+				final String tpLblFName = cmd.hasOption("l") ? cmd.getOptionValue("l") : null;
 				SimilarityMatix.extractGT(files[0], cmd.getOptionValue("e"), idMapFName, tpLblFName, dirty);
-				System.exit(0);
+				if(!cmd.hasOption("p") && !cmd.hasOption("o"))
+					System.exit(0);
+				idMapFName = null;
 			}
 
 			// Check for the filtering option
 			// ATTENTION: should be done before the input datasets reading
 			final boolean filteringOn = cmd.hasOption("f");
-			if(cmd.hasOption("n"))
-				idMapFName = cmd.getOptionValue("n");
 				
 			if(cmd.hasOption("g")) {
 				String gtDataset = cmd.getOptionValue("g");
@@ -138,16 +136,6 @@ public class main {
 				statix.loadDataset(files[0], filteringOn, idMapFName, hints, dirty);
 			}
 
-			// Set output file
-			String outpfile = null;
-			if(cmd.hasOption("o")) {
-				outpfile = cmd.getOptionValue("o");
-			}
-			else {
-				outpfile = files[0];
-				// Replace the extension to the clustering results
-				outpfile = Statix.updateFileExtension(outpfile, Statix.extCls);  // Default extension for the output file
-			}
 			// Scale
 			float scale = -1;
 			if(cmd.hasOption("s")) {
@@ -182,8 +170,21 @@ public class main {
 					e.printStackTrace();
 					System.exit(1);
 				}
-			} else  // Perform type inference
+			} else {
+				// Set output file
+				String outpfile = null;
+				if(cmd.hasOption("o")) {
+					outpfile = cmd.getOptionValue("o");
+				}
+				else {
+					outpfile = files[0];
+					// Replace the extension to the clustering results
+					outpfile = Statix.updateFileExtension(outpfile, Statix.extCls);  // Default extension for the output file
+				}
+				
+				// Perform type inference			
 				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, reduceByWeight, filteringOn, weighnode, jaccard);
+			}
 		}
 		catch (ParseException e) {  //  | IllegalArgumentException
 			e.printStackTrace();
