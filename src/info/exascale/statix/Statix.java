@@ -442,13 +442,14 @@ public class Statix {
 			links.clear();
 		}
 		// Add missed nids to the graph
-		Ids  dnids = new Ids();  // Stand alone node ids
-		dnids.reserve(nids.size());
-		for(Long nid: nids)
-			dnids.add(nid);
-		nids = null;
-		gr.addNodes(dnids);
-		dnids = null;
+		if(!nids.isEmpty()) {
+			Ids  dnids = new Ids();  // Stand alone node ids
+			dnids.reserve(nids.size());
+			for(Long nid: nids)
+				dnids.add(nid);
+			nids = null;
+			gr.addNodes(dnids);
+		} else nids = null;
 		// Hint system to collect the released memory used for the graph construction
 		if(instances.size() >= 1E4)
 			System.gc();
