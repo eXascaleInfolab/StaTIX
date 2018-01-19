@@ -33,18 +33,19 @@ public class main {
 		//options.addOption("p", "supervised", true, "Supervision hint data in the format: <indicativity>\t <property>, where indicativity E [0, 1], '#' line comments are allowed.");
 		options.addOptionGroup(optspv);
 		options.addOption("o", "output", true, "Output file, default: <inpfile>" + Statix.extCls);
-		options.addOption("n", "id-name", true, "Output map of the instance id names (<inpfile>.idm in tab separated format: <id> <subject_name>), default: disabled. Note: all instances are mapped including non-typed ones");
+		options.addOption("n", "id-name", true, "Output map of the instance id names (labels) to the <inpfile>.idm in tab separated format: <id> <subject_name>, default: disabled. Note: all instances are mapped including non-typed ones");
 		options.addOption("l", "cl-label", true, "Output map of the cluster labels (names) (<inpfile>.clb in the label per line format, default: disabled, requires: -e");
 		options.addOption("m", "multi-level", false, "Output type inference for multiple scales (representative clusters from all hierarchy levels) besides the macro scale (top level, root)");
 		options.addOption("s", "scale", true, "Scale (resolution, gamma parameter of the clustering), -1 is automatic scale inference for each cluster, >=0 is the forced static scale (<=1 for the macro clustering); default: -1");
-		options.addOption("r", "reduce", true, "Reduce similarity matrix on graph construction by non-significant relations to reduce memory consumption and speedup the clustering (recommended for large datasets). Options X[Y]; X: a - accurate, m - mean, s - severe; Y: o - use optimization function for the links reduction (default), w - reduce links by their raw weight. Examples: -r m, -r mw");
+		options.addOption("r", "reduce", true, "Reduce graph links (similarity matrix) on the graph clustering (after the graph is constructed) by non-significant relations to reduce memory consumption and speedup the clustering (recommended for large datasets). Options X[Y]; X: a - accurate, m - mean, s - severe; Y: o - use optimization function for the links reduction (default), w - reduce links by their raw weight. Examples: -r m, -r mw. Note: all non-zero unique items (half of the symmetric matrix) are supplied for the graph construction, which is the memory consumption bottleneck");
+		options.addOption("c", "cut-ratio", true, "Cut the graph links (similarity matrix) iteratively on the graph construction before the construction is completed discarding instance (node) links lighter than cut-ratio * avg_ndlinks_weight, cut-ratio E [0, 1), recommended value if applied: ~0.25, 0 means skip the cutting. Reduces the memory consumption and speedups the clustering but affects the accuracy, see \"reduce\" for the more accurate links reduction during the clustering");
 		options.addOption("f", "filter", false, "Filter out from the resulting clusters all subjects that do not have the '#type' property in the input dataset, used for the type inference evaluation");
 		options.addOption("w", "weigh-instance", false, "Weight RDF instances (subjects, consider the self-relation) or use only the weighted relations between the instances");
 		options.addOption("j", "jaccard-similarity", false, "Use (weighted) Jaccard instead of the Cosine similarity");
 		options.addOption("e", "extract-groundtruth", true, "Extract ground-truth (ids of the subjects per each type) to the specified file in the " + Statix.extCls + " format, optionally with subjects and type labels");
 		options.addOption("u", "unique-triples", false, "Unique triples only are present in the ground-truth dataset (natty, clean data without duplicates), so there is no need of the possible duplicates identification and omission");
-		options.addOption("p", "network", true, "Produce .rcg input network file for the clustering without the type inference itself");
-		options.addOption("v", "version", false, "Show version");
+		options.addOption("p", "network", true, "Produce .rcg input network file for the clustering without the type inference itself and respecting the \"cut-ratio\", \"filter\", \"weigh-instance\" and \"jaccard-similarity\" options");
+		options.addOption("v", "version", false, "Show version number");
 		
 		HelpFormatter formatter = new HelpFormatter();
 		String[] argsOpt = new String[]{"args"};
@@ -90,11 +91,11 @@ public class main {
 				throw new IllegalArgumentException("A single input dataset is expected with optimal parameters");
 			
 			String idMapFName = cmd.hasOption("n") ? cmd.getOptionValue("n") : null;
-			final boolean dirty = !cmd.hasOption("u");
+			final boolean dirty = !cmd.hasOption("u");  // Dirty input: triples might include duplicates
 
 			// Check for the filtering option
 			// ATTENTION: should be done before the input datasets reading
-			final boolean filteringOn = cmd.hasOption("f");				
+			final boolean filteringOn = cmd.hasOption("f");
 
 			// Check for the GT extraction
 			if(cmd.hasOption("l") && !cmd.hasOption("e"))
@@ -157,6 +158,14 @@ public class main {
 				}
 			}
 			
+			// Links cutting ratio
+			float  lnscut = 0;
+			if(cmd.hasOption("c")) {
+				lnscut = Float.parseFloat(cmd.getOptionValue("c"));
+				if(lnscut < 0 || lnscut >= 1)
+					throw new IllegalArgumentException("The cut-ratio parameter is out of the expected range");
+			}
+			
 			final boolean weighnode = cmd.hasOption("w");
 			final boolean jaccard = cmd.hasOption("j");
 			if(cmd.hasOption("p")) {
@@ -164,7 +173,7 @@ public class main {
 				final String  netfile = cmd.getOptionValue("p");
 				try {
 					// Apply additional raw links reduction on preprocessing for the severe reduction policy
-					statix.saveNet(netfile, weighnode, jaccard, reduction == 's');  // "ms".indexOf(reduction) != -1
+					statix.saveNet(netfile, weighnode, jaccard, lnscut);
 				} catch(IOException e) {
 					System.err.println("ERROR on saving to the network file (" + netfile + "):\n");
 					e.printStackTrace();
@@ -183,7 +192,7 @@ public class main {
 				}
 				
 				// Perform type inference			
-				statix.cluster(outpfile, scale, cmd.hasOption("m"), reduction, reduceByWeight, filteringOn, weighnode, jaccard);
+				statix.cluster(outpfile, scale, cmd.hasOption("m"), lnscut, reduction, reduceByWeight, filteringOn, weighnode, jaccard);
 			}
 		}
 		catch (ParseException e) {  //  | IllegalArgumentException

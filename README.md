@@ -53,9 +53,20 @@ Options:
                                   2) on supervision, which defines the
                                   indicativity precision eps=0.5/(marks +
                                   1): eps=0.167 for 2 marks
+ -c,--cut-ratio <arg>             Cut the graph links (similarity matrix)
+                                  iteratively on the graph construction
+                                  before the construction is completed
+                                  discarding instance (node) links lighter
+                                  than cut-ratio * avg_ndlinks_weight,
+                                  cut-ratio E [0, 1), recommended value if
+                                  applied: ~0.25, 0 means skip the
+                                  cutting. Reduces the memory consumption
+                                  and speedups the clustering but affects
+                                  the accuracy
  -e,--extract-groundtruth <arg>   Extract ground-truth (ids of the
                                   subjects per each type) to the specified
-                                  file in the .cnl format
+                                  file in the .cnl format, optionally with
+                                  subjects and type labels
  -f,--filter                      Filter out from the resulting clusters
                                   all subjects that do not have the
                                   '#type' property in the input dataset,
@@ -66,26 +77,38 @@ Options:
  -h,--help                        Show usage
  -j,--jaccard-similarity          Use (weighted) Jaccard instead of the
                                   Cosine similarity
+ -l,--cl-label <arg>              Output map of the cluster labels (names)
+                                  (<inpfile>.clb in the label per line
+                                  format, default: disabled, requires: -e
  -m,--multi-level                 Output type inference for multiple
                                   scales (representative clusters from all
                                   hierarchy levels) besides the macro
                                   scale (top level, root)
- -n,--id-name <arg>               Output map of the id names
-                                  (<inpfile>.idm in tab separated format:
-                                  <id> <subject_name>), default: disabled
+ -n,--id-name <arg>               Output map of the instance id names
+                                  (labels) to the <inpfile>.idm in tab
+                                  separated format: <id> <subject_name>,
+                                  default: disabled. Note: all instances
+                                  are mapped including non-typed ones
  -o,--output <arg>                Output file, default: <inpfile>.cnl
  -p,--network <arg>               Produce .rcg input network file for the
                                   clustering without the type inference
-                                  itself
- -r,--reduce <arg>                Reduce similarity matrix on graph
-                                  construction by non-significant
+                                  itself and respecting the "cut-ratio",
+                                  "filter", "weigh-instance" and
+                                  "jaccard-similarity" options
+ -r,--reduce <arg>                Reduce graph links (similarity matrix)
+                                  on the graph clustering (after the graph
+                                  is constructed) by non-significant
                                   relations to reduce memory consumption
                                   and speedup the clustering (recommended
                                   for large datasets). Options X[Y]; X: a
                                   - accurate, m - mean, s - severe; Y: o -
                                   use optimization function for the links
                                   reduction (default), w - reduce links by
-                                  their raw weight. Examples: -r m, -r mw
+                                  their raw weight. Examples: -r m, -r mw.
+                                  Note: all non-zero unique items (half of
+                                  the symmetric matrix) are supplied for
+                                  the graph construction, which is the
+                                  memory consumption bottleneck
  -s,--scale <arg>                 Scale (resolution, gamma parameter of
                                   the clustering), -1 is automatic scale
                                   inference for each cluster, >=0 is the
@@ -96,10 +119,10 @@ Options:
                                   without duplicates), so there is no need
                                   of the possible duplicates
                                   identification and omission
- -v,--version                     Show version
- -w,--weigh-instance              Weight RDF instances (subjects) or use
-                                  only the weighted relations between the
-                                  instances
+ -v,--version                     Show version number
+ -w,--weigh-instance              Weight RDF instances (subjects, consider
+                                  the self-relation) or use only the
+                                  weighted relations between the instances
 ```
 To infer types without the ground-truth available with the implicit output to the `inpDataset.cnl`: `./run.sh inpDataset.rdf`.  
 To infer types with available ground-truth for the sampled reduced dataset or using another typed dataset with similar structure, performing output to the `results.cnl`: `./run.sh -g gtSample.rdf -o results.cnl inpDataset.rdf`.  

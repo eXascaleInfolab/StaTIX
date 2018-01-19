@@ -347,19 +347,19 @@ public class Statix {
 	//!
 	//! @param weighnode  - weigh nodes (node self-weight) besides their links
 	//! @param jaccard  - use (weighted) Jaccard instead of the Cosine similarity
-	//! @param rawrds  - raw links reduction (affects clustering accuracy but speedups the clustering)
+	//! @param lnscut  - links cutting ratio E [0, 1), 0 means skip the cutting
 	//! @return the input graph for the clustering
-	protected Graph buildGraph(final boolean weighnode, final boolean jaccard, final boolean rawrds) {
+	protected Graph buildGraph(final boolean weighnode, final boolean jaccard, final float lnscut) {
 		final Set<String>  instances = csmat.instances();
 		final int  instsNum = instances.size();
 		Graph  gr = new Graph(instsNum);
 		// ATTENTION: filtering out nodes have negative ids, so the nodes can't be preallocated in advance.
 		//gr.addNodes(instsNum, 0);  // Create all nodes to avoid dedicated creation of the stand-alone nodes
 		InpLinks  grInpLinks = new InpLinks();
-		InpLinks  rdsInpLinks = rawrds ? new InpLinks() : null;  // Reducing links
+		InpLinks  rdsInpLinks = lnscut > 0 ? new InpLinks() : null;  // Reducing links
 		// Minimal links number of the instance to apply the raw links reduction
-		// Do not reduce small number of links (1 + var results in > ~20 links)
-		final float  rdsmarg = (float)(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
+		// Do not reduce small number of links (1 + var results in E [7, ~20 links])
+		final int  rdsmarg = (int)Math.round(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
 
 		HashSet<Long>  nids = new HashSet<Long>();  // Stand alone node ids
 		// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
@@ -389,7 +389,7 @@ public class Statix {
 					wsum += weight;
 					if(wmin > weight)
 						wmin = weight;
-				} else if(rawrds && j != i) {
+				} else if(lnscut > 0 && j != i) {
 					final long  did = csmat.instanceId(inst2);
 					final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
 					if(weight == 0) {
@@ -409,7 +409,7 @@ public class Statix {
 				// Note: Typically the self-weight is 1
 				final float  weight = (float)csmat.similarity(inst1, inst1, jaccard);
 				if(weight != 0) {
-					if(rawrds) {
+					if(lnscut > 0) {
 						// Update weights statistics
 						// ATTENTION: do not consider self-weight for the links weights margin evaluation
 						wsum += wsum / grInpLinks.size();
@@ -422,9 +422,9 @@ public class Statix {
 			}
 			// Perform raw reduction of the links if required
 			InpLinks  links = rdsInpLinks;
-			if(rawrds && grInpLinks.size() >= rdsmarg) {
+			if(lnscut > 0 && grInpLinks.size() >= rdsmarg) {
 				// Reducing weight margin is half of the average
-				final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) / 4;
+				final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) * lnscut;
 				if(wmarg > wmin) {
 					for(InpLink ln: grInpLinks)
 						if(ln.getWeight() >= wmarg)
@@ -434,10 +434,10 @@ public class Statix {
 					grInpLinks.clear();
 				}
 			}
-			if(!rawrds || !grInpLinks.isEmpty())
+			if(lnscut <= 0 || !grInpLinks.isEmpty())
 				links = grInpLinks;
-			// Note: the matrix is always symmetric, just for the "rawrds" duplicated edges may be saved
-			// and should be omitted (internally by the clustering lib)
+			// Note: the matrix is always symmetric, just for the enabled links cutting the duplicated edges
+			// may be saved and should be omitted (internally by the clustering lib)
 			gr.addNodeAndEdges(sid, links);
 			links.clear();
 		}
@@ -462,8 +462,8 @@ public class Statix {
 	//! @param outputPath  - the network file name
 	//! @param weighnode  - weigh nodes (node self-weight) besides their links
 	//! @param jaccard  - use (weighted) Jaccard instead of the Cosine similarity
-	//! @param rawrds  - raw links reduction (affects clustering accuracy but speedups the clustering)
-	public void saveNet(String outputPath, final boolean weighnode, final boolean jaccard, final boolean rawrds) throws IOException {
+	//! @param lnscut  - links cutting ratio E [0, 1), 0 means skip the cutting
+	public void saveNet(String outputPath, final boolean weighnode, final boolean jaccard, final float lnscut) throws IOException {
 		try(
 			BufferedWriter  netf = Files.newBufferedWriter(Paths.get(outputPath));  // new BufferedWriter(new FileWriter(idMapFName))
 		) {
@@ -472,16 +472,19 @@ public class Statix {
 
 			// Write .rcg header
 			netf.write("/Graph weighted:1 validated:1\n/Nodes " + instsNum  // ATTENTION: the starting id should not be specified if the filtering is enabled
-				// Note: the matrix is always symmetric, just for the "rawrds" duplicated edges may be saved and should be omitted
+				// Note: the matrix is always symmetric, just for the enabled links cutting the duplicated edges may be saved and should be omitted
 				//+ "\n/" + (rawrds ? "Arcs" : "Edges") + "\n"
 				+ "\n/Edges\n");
-			if(rawrds)
+			if(lnscut > 0) {
 				netf.write("# Note: duplicated edges may exist and should be omitted\n");
-			InpLinks  grInpLinks = rawrds ? new InpLinks() : null;
-			InpLinks  rdsInpLinks = rawrds ? new InpLinks() : null;  // Reducing links
+				if(lnscut >= 1)
+					throw new IllegalArgumentException("The lnscut parameter is out of the expected range");
+			}
+			InpLinks  grInpLinks = lnscut > 0 ? new InpLinks() : null;
+			InpLinks  rdsInpLinks = lnscut > 0 ? new InpLinks() : null;  // Reducing links
 			// Minimal links number of the instance to apply the raw links reduction
-			// Do not reduce small number of links (1 + var results in > ~20 links)
-			final float  rdsmarg = (float)(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
+			// Do not reduce small number of links (1 + var results in E [7, ~20 links])
+			final int  rdsmarg = (int)Math.round(7 + Math.pow(instances.size(), 1.f - Math.exp(-2.f)));  // 0.86466
 
 			// Note: Java iterators are not copyable and there is not way to get iterator to the custom item,
 			// so even for the symmetric matrix all iterations should be done
@@ -502,7 +505,7 @@ public class Statix {
 						//System.out.print(" " + did + ":" + weight);
 						//if(weight <= 0 || Float.isNaN(weight))
 						//	throw new IllegalArgumentException("Weight for #(" + inst1 + ", " + inst2 + ") is out of range: " + weight);
-						if(rawrds) {
+						if(lnscut > 0) {
 							grInpLinks.add(new InpLink(did, weight));
 							// Update weights statistics
 							wsum += weight;
@@ -515,7 +518,7 @@ public class Statix {
 							}
 							netf.write(" " + Integer.toUnsignedString(did) + ":" + weight);
 						}
-					} else if(rawrds && j != i) {
+					} else if(lnscut > 0 && j != i) {
 						final float  weight = (float)csmat.similarity(inst1, inst2, jaccard);
 						if(weight == 0)
 							continue;
@@ -532,7 +535,7 @@ public class Statix {
 					// Note: Typically the self-weight is 1
 					final float  weight = (float)csmat.similarity(inst1, inst1, jaccard);
 					if(weight != 0) {
-						if(rawrds) {
+						if(lnscut > 0) {
 							// Update weights statistics
 							// ATTENTION: do not consider self-weight for the links weights margin evaluation
 							wsum += wsum / grInpLinks.size();
@@ -551,7 +554,7 @@ public class Statix {
 					}
 				}
 				// Perform raw reduction of the links if required
-				if(rawrds && !grInpLinks.isEmpty()) {
+				if(lnscut > 0 && !grInpLinks.isEmpty()) {
 					if(initial) {
 						initial = false;
 						netf.write(Integer.toUnsignedString(sid) + ">");
@@ -559,7 +562,7 @@ public class Statix {
 					InpLinks  links = rdsInpLinks;
 					if(grInpLinks.size() >= rdsmarg) {
 						// Reducing weight margin is half of the average
-						final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) / 4;
+						final float  wmarg = wmin + (float)(wsum / grInpLinks.size() - wmin) * lnscut;
 						if(wmarg > wmin) {
 							for(InpLink ln: grInpLinks)
 								if(ln.getWeight() >= wmarg)
@@ -585,12 +588,12 @@ public class Statix {
 			System.err.println("The network is saved to: " + outputPath);
 		}
 	}
-	
-	public void cluster(String outputPath, float scale, boolean multiLev, char reduction, boolean reduceByWeight, boolean filteringOn, boolean weighnode, boolean jaccard) throws Exception {
+
+	public void cluster(String outputPath, float scale, boolean multiLev, float lnscut, char reduction, boolean reduceByWeight, boolean filteringOn, boolean weighnode, boolean jaccard) throws Exception {
 		System.err.println("Calling the clustering lib...");
 		// Apply raw links reduction for the medium and severe reduction policy to reduce consumed memory
 		// Apply additional raw links reduction on preprocessing for the severe reduction policy
-		Graph gr = buildGraph(weighnode, jaccard, reduction == 's');  // "ms".indexOf(reduction) != -1
+		Graph gr = buildGraph(weighnode, jaccard, lnscut);
 		// Cosin similarity matrix is not required any more, release it
 		csmat = null;
 		OutputOptions outpopts = new OutputOptions();
