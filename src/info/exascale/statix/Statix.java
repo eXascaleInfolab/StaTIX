@@ -447,11 +447,10 @@ public class Statix {
 			dnids.reserve(nids.size());
 			for(Long nid: nids)
 				dnids.add(nid);
-			nids = null;
 			gr.addNodes(dnids);
-		} else nids = null;
+		}
 		// Hint system to collect the released memory used for the graph construction
-		if(instances.size() >= 1E4)
+		if(instances.size() >= 5E3)
 			System.gc();
 
 		System.err.println("The input graph is formed");
