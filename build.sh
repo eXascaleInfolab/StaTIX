@@ -2,7 +2,7 @@
 # Build of the StaTIX
 # The only optional parameter is the jar output dir
 
-USAGE="$0 [-p] [-c] [<outdir>]
+USAGE="$0 [-p] [-c] [-v] [<outdir>]
   -p,--pack - build the tarball besides the executables
   -c,--classes  - retain classes after the build, useful for the frequent
     modification and recompilation of some files.
@@ -14,6 +14,7 @@ USAGE="$0 [-p] [-c] [<outdir>]
 # Process input options
 TARBALL=0  # Make tarball
 DELCLS=1  # Delete the classes after the jar building
+VERBOSE=0  # Verbose output, useful to identify errors
 
 while [ $1 ]
 do
@@ -24,6 +25,10 @@ do
 		;;
 	-c|--classes)
 		DELCLS=0
+		shift
+		;;
+	-v|--verbose)
+		VERBOSE=1
 		shift
 		;;
 	-*)
@@ -45,6 +50,14 @@ done
 OUTDIR=${1:-.}  # Output directory for the executable package
 CLSDIR="$OUTDIR"/classes  # Classes output directory
 APP=statix  # App name
+
+JCFLAGS=""  # Java compiler flags
+if [ $VERBOSE -ge 1 ]; then
+	JCFLAGS="-Xdiags:verbose"
+fi
+
+# Create the output dir if not exists
+mkdir -p $CLSDIR  # 2> /dev/null
 
 # Set revision to the sources
 # REV="`git rev-parse HEAD`(`git log -1 --format=%ci --`)"
@@ -81,7 +94,7 @@ else
 fi
 # Compile, exit on error
 echo "Compiling the classes in the \"$CLSDIR\", revision: $REV..."
-javac -cp lib/\* -sourcepath src -d "$CLSDIR" src/info/exascale/statix/*.java
+javac $JCFLAGS -cp lib/\* -sourcepath src -d "$CLSDIR" src/info/exascale/statix/*.java
 ERRCOMPILE=$?
 # Recover the original sources
 if [ -n "$REV" ]
