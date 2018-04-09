@@ -1,5 +1,9 @@
 # StaTIX
-Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in the N3 or N-Quads format. This is a Master Project of Soheil Roshankish.
+Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in the N3 or N-Quads format.
+
+The type inference framework paper "StaTIX — Statistical Type Inference on Linked
+Data" is submitted to the [ISWC-18](http://iswc2018.semanticweb.org/call-for-research-track-papers/) conference, the clustering paper is being written.
+The StaTIX Java client application initially was developed in the scope of the [Master Project](https://goo.gl/tznYeL) of [Soheil Roshankish](http://unibe-ch2.academia.edu/SoheilRoshankish/CurriculumVitae).
 
 \authors: (c) Artem Lutov <artem@exascale.info>, Soheil Roshankish  
 \license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
@@ -16,13 +20,19 @@ Statistical Type Inference (both fully automatic and semi supervised) for RDF da
 ## Overview
 
 StaTIX performs *statistical type inference for the RDF datasets* in fully automatic fashion with possibility to use semi supervised mode. In the semi supervised mode, either *a)* the sample of the processing dataset *prelabeled with the type* properties should be provided, or *b)* another dataset should be specified with the present type properties and, desirably, similar structure to the processing dataset. The input RDF dataset(s) should be specified in the [N3](https://www.w3.org/TeamSubmission/n3/)/[N4 (N-Quads)](https://www.w3.org/TR/n-quads/) formats: `<subject> <property> <object> .`.  
-Types that are clusters of the RDF triple subjects are identified in the scope of the whole input dataset with *automatic scale identification for each cluster*. The *scale* for all clusters can be manually forced in case specific macro or micro level clustering is required.  
+Types (rdf objects, which correspond `rdf:type` predicate value) are inferred as clusters of the RDF triple subjects in the scope of the whole input dataset with *automatic scale identification for each cluster*. The *scale* for all clusters can be manually forced in case specific macro or micro level clustering is required.  
 For the semi supervised mode, similarity between the RDF subjects is evaluated with respect to the #type properties using *TF-IDF based similarity weighting* for the weighted *cosin similarity*.
+
+> Currently StaTIX infers semantic types based only on the statistical analysis of the input dataset. The accuracy can be improved further with additional semantic analyses leveraging both logical inference and embedding techniques to better grasp the differences and relationships between various instances.
+
 
 The output results are clusters in the [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members). Each cluster correspond to the type and has members represented by the subject ids. Subject ids are generated sequentially starting from `0` for all unique subjects in the input dataset.
 
-Accuracy of the StaTIX type inference (see details in [TInfES](https://github.com/eXascaleInfolab/TInfES) and [benchmarking results](https://docs.google.com/spreadsheets/d/e/2PACX-1vShqU5Vs9GimVV5OXoZ50uFNwhGfySwNZGYFufKo-lyq5-FMDAZ77yYLcFbo_iOGa2kDe5a1bI6TCFj/pubhtml?gid=2147007814&single=true)):
+Evaluation of the StaTIX type inference (see details in [TInfES](https://github.com/eXascaleInfolab/TInfES)):
+Accuracy (the higher, the better):
 ![F1h](images/F1h_Algs.png)
+Execution time (the lower, the better):
+![Execution Time](images/ETime_Algs.png)
 
 ## Requirements
 *StaTIX* uses *DAOC* clustering library and *Apache [Commons CLI](https://commons.apache.org/proper/commons-cli/)* arguments parser. Both libraries are included into the repository and located in the `/lib` dir.  
