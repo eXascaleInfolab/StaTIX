@@ -28,7 +28,7 @@ For the semi supervised mode, similarity between the RDF subjects is evaluated w
 The output results are clusters in the [.cnl format](https://github.com/eXascaleInfolab/PyCABeM/blob/master/formats/format.cnl) (space separated list of members). Each cluster correspond to the type and has members represented by the subject ids. Subject ids are generated sequentially starting from `0` for all unique subjects in the input dataset.
 
 ### Evaluation of the StaTIX type inference (see details in [TInfES](https://github.com/eXascaleInfolab/TInfES))
-StaTIX is executed as `./run.sh -f -m -r 1 -o <outp_cls> <inp_dataset>` and compared with [SDA](https://link.springer.com/chapter/10.1007/978-3-319-25264-3_36) and [SDType](http://www.heikopaulheim.com/docs/iswc2013.pdf).
+StaTIX is executed as `./run.sh -f -m -r m -o <outp_cls> <inp_dataset>` and compared with [SDA](https://link.springer.com/chapter/10.1007/978-3-319-25264-3_36) and [SDType](http://www.heikopaulheim.com/docs/iswc2013.pdf).
 
 **Accuracy** (the higher, the better):
 ![F1h](images/F1h_Algs.png)
