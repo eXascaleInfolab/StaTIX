@@ -1,13 +1,14 @@
 # StaTIX
 Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in the N3 or N-Quads format.
 
-The type inference framework paper "StaTIX — Statistical Type Inference on Linked
-Data" is submitted to the [ISWC-18](http://iswc2018.semanticweb.org/call-for-research-track-papers/) conference, the clustering paper is being written.
+<!-- The type inference framework paper "StaTIX — Statistical Type Inference on Linked
+Data" is submitted to the conference, the clustering paper is being written.
 The StaTIX Java client application initially was developed in the scope of the [Master Project](https://goo.gl/tznYeL) of [Soheil Roshankish](http://unibe-ch2.academia.edu/SoheilRoshankish/CurriculumVitae).
 
 \authors: (c) Artem Lutov <artem@exascale.info>, Soheil Roshankish  
-\license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
 \organization: [eXascale Infolab](http://exascale.info/)  
+NOTE: the authors are temporaly hided for the tripple-blind conference review -->
+\license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
 
 
 ## Content
