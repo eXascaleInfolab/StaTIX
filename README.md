@@ -11,11 +11,11 @@ The paper: **StaTIX — Statistical Type Inference on Linked Data**
   year={2018}
 }
 ```
-The StaTIX *Java client application* initially was developed in the scope of the [Master Project](https://goo.gl/tznYeL) of [Soheil Roshankish](http://unibe-ch2.academia.edu/SoheilRoshankish/CurriculumVitae).
+The StaTIX *Java client application* was initially developed in the scope of the [Master Project](https://goo.gl/tznYeL) of [Soheil Roshankish](http://unibe-ch2.academia.edu/SoheilRoshankish/CurriculumVitae).
 
 \authors: (c) Artem Lutov <artem@exascale.info>, Soheil Roshankish  
-\license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
 \organization: [eXascale Infolab](http://exascale.info/)  
+\license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
 
 
 ## Content
