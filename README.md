@@ -1,9 +1,17 @@
 # StaTIX
 Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in the N3 or N-Quads format.
 
-The type inference framework paper "StaTIX — Statistical Type Inference on Linked
-Data" is submitted to the [ISWC-18](http://iswc2018.semanticweb.org/call-for-research-track-papers/) conference, the clustering paper is being written.
-The StaTIX Java client application initially was developed in the scope of the [Master Project](https://goo.gl/tznYeL) of [Soheil Roshankish](http://unibe-ch2.academia.edu/SoheilRoshankish/CurriculumVitae).
+The paper: **StaTIX — Statistical Type Inference on Linked Data**
+```bibtex
+\cite:
+@inproceedings{Stx18,
+  title={StaTIX — Statistical Type Inference on Linked Data},
+  author={Artem Lutov and Soheil Roshankish and Mourad Khayati and Philippe Cudré-Mauroux},
+  booktitle={IEEE BigData 2018 - 4th Special Session on Intelligent Data Mining},
+  year={2018}
+}
+```
+The StaTIX *Java client application* initially was developed in the scope of the [Master Project](https://goo.gl/tznYeL) of [Soheil Roshankish](http://unibe-ch2.academia.edu/SoheilRoshankish/CurriculumVitae).
 
 \authors: (c) Artem Lutov <artem@exascale.info>, Soheil Roshankish  
 \license:  [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)  
@@ -61,7 +69,7 @@ Options:
                                   '-[<nopts=INF>]'  - automatic generation
                                   of the hints to the <inpfile_marks.ipl>,
                                   where <marks> is the range of marks (>=
-                                  2) on supervision, which defines the
+                                  1) on supervision, which defines the
                                   indicativity precision eps=0.5/(marks +
                                   1): eps=0.167 for 2 marks
  -c,--cut-ratio <arg>             Cut the graph links (similarity matrix)
