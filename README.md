@@ -1,7 +1,7 @@
 # StaTIX
 Statistical Type Inference (both fully automatic and semi supervised) for RDF datasets in the N3 or N-Quads format.
 
-\cite: **StaTIX — Statistical Type Inference on Linked Data**
+\cite: [StaTIX — Statistical Type Inference on Linked Data](https://github.com/eXascaleInfolab/StaTIX/blob/master/docs/statix.pdf)
 ```bibtex
 @inproceedings{Stx18,
   title={StaTIX — Statistical Type Inference on Linked Data},
