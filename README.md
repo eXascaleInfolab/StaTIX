@@ -7,6 +7,7 @@ Statistical Type Inference (both fully automatic and semi supervised) for RDF da
   title={StaTIX — Statistical Type Inference on Linked Data},
   author={Artem Lutov and Soheil Roshankish and Mourad Khayati and Philippe Cudré-Mauroux},
   booktitle={IEEE BigData 2018 - 4th Special Session on Intelligent Data Mining},
+  doi={10.1109/BigData.2018.8622285}
   year={2018}
 }
 ```
